@@ -14,10 +14,16 @@
             <ul class="nav-links" id="navLinks">
                 <li><a href="/">Home</a></li>
                 <li><a href="/predict_page">Predict</a></li>
-                <li><a href="/chatbot">Chat</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
                 <li><a href="/services">Services</a></li>
                 <li><a href="/contact" class="active">Contact</a></li>
                 <li><a href="/about">About</a></li>
+                {% if session.get('user_id') %}
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/logout">Logout ({{ session.get('username') }})</a></li>
+                {% else %}
+                <li><a href="/login">Login</a></li>
+                {% endif %}
             </ul>
             <button class="mobile-toggle" id="mobileToggle">
                 <i class="fas fa-bars"></i>
@@ -50,6 +56,12 @@
         <div class="content">
             <h2><i class="fas fa-comments"></i> Support</h2>
             <p>For technical support or questions about our AI prediction model, please contact our support team at support@automind.com</p>
+            <p style="margin-top: .5rem;">Looking to connect with our community? Start a chat:</p>
+            <ul style="margin-left:1rem;">
+                <li>Chats with Mechanics: <a href="/mechanics">Browse Mechanics</a></li>
+                <li>Chats with Car Dealers: <a href="/dealers">Browse Dealers</a></li>
+                <li>Chats with Customers: <a href="/chat_users">All Users</a></li>
+            </ul>
         </div>
         
         <div class="content">
