@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile - Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/logout">Logout ({{ session.get('username') }})</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Profile</h1>
+        <div class="content">
+            <p><strong>Username:</strong> {{ user['username'] }}</p>
+            <p><strong>User Type:</strong> {{ user['user_type'] }}</p>
+        </div>
+        <form method="post" class="form">
+            <div class="form-group">
+                <label class="form-label">UPI ID</label>
+                <input class="form-control" name="upi_id" value="{{ user['upi_id'] or '' }}" placeholder="e.g., name@upi">
+            </div>
+            <button class="btn btn-primary" type="submit">Save</button>
+        </form>
+        <form method="post" action="/delete_account" class="form" style="margin-top:1rem;">
+            <button class="btn btn-secondary" type="submit" onclick="return confirm('Delete your account and all chats?');">Delete Account</button>
+        </form>
+    </div>
+
+    <script>
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+    </script>
+</body>
+</html>
+
+

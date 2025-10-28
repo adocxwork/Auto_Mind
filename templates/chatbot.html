@@ -15,10 +15,16 @@
             <ul class="nav-links" id="navLinks">
                 <li><a href="/">Home</a></li>
                 <li><a href="/predict_page">Predict</a></li>
-                <li><a href="/chatbot" class="active">Chat</a></li>
+                <li><a href="/chatbot" class="active">ChatBot</a></li>
                 <li><a href="/services">Services</a></li>
                 <li><a href="/contact">Contact</a></li>
                 <li><a href="/about">About</a></li>
+                {% if session.get('user_id') %}
+                <li><a href="/profile">Profile</a></li>
+                <li><a href="/logout">Logout ({{ session.get('username') }})</a></li>
+                {% else %}
+                <li><a href="/login">Login</a></li>
+                {% endif %}
             </ul>
             <button class="mobile-toggle" id="mobileToggle">
                 <i class="fas fa-bars"></i>
