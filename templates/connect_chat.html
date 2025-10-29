@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat - Connect | Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect" class="active">Connect</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="connect-chat">
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <div class="me">
+                    <div class="avatar"><i class="fas fa-user"></i></div>
+                    <div class="meta">
+                        <div class="name">{{ me['username'] }}</div>
+                        <div class="sub">{{ me['username'] }} {{ me['account_type'] }} | {{ me['upi_id'] }}</div>
+                    </div>
+                </div>
+                <div style="display:flex; gap:0.5rem; align-items:center;">
+                    <form action="/connect/delete_account" method="post" onsubmit="return confirm('Delete your account permanently? This cannot be undone.');">
+                        <button type="submit" class="logout" style="background:none; border:none; cursor:pointer; color:var(--error);"><i class="fas fa-user-slash"></i> Delete</button>
+                    </form>
+                    <a href="/connect/logout" class="logout"><i class="fas fa-sign-out-alt"></i> Logout</a>
+                </div>
+            </div>
+            <div class="user-list" id="userList"></div>
+        </div>
+        <div class="chat-main">
+            <div class="chat-header" id="chatHeader">
+                <span>Select a user to start chatting</span>
+            </div>
+            <div class="chat-body" id="chatBody"></div>
+            <div class="chat-input-row">
+                <textarea class="chat-input" id="msgInput" rows="1" placeholder="Type a message..."></textarea>
+                <button class="send-button" id="sendBtn"><i class="fas fa-paper-plane"></i> Send</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        const userListEl = document.getElementById('userList');
+        const chatBody = document.getElementById('chatBody');
+        const chatHeader = document.getElementById('chatHeader');
+        const msgInput = document.getElementById('msgInput');
+        const sendBtn = document.getElementById('sendBtn');
+        let meId = {{ me['id'] }};
+        let selectedUserId = null;
+        let pollTimer = null;
+
+        function renderUser(user) {
+            if (user.id === meId) return '';
+            const label = `${user.username} ${user.account_type} | ${user.upi_id}`;
+            return `
+                <div class="user-item" data-id="${user.id}">
+                    <div class="avatar"><i class="fas fa-user"></i></div>
+                    <div class="info">
+                        <div class="name">${user.username}</div>
+                        <div class="sub">${label}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        async function loadUsers() {
+            const res = await fetch('/connect/users');
+            const users = await res.json();
+            userListEl.innerHTML = users.map(renderUser).join('');
+            userListEl.querySelectorAll('.user-item').forEach(el => {
+                el.addEventListener('click', () => {
+                    selectedUserId = parseInt(el.getAttribute('data-id'));
+                    const u = users.find(x => x.id === selectedUserId);
+                    chatHeader.innerHTML = `<div class="chat-with">${u.username}</div><div class="sub">${u.username} ${u.account_type} | ${u.upi_id}</div>`;
+                    loadMessages();
+                    if (pollTimer) clearInterval(pollTimer);
+                    pollTimer = setInterval(loadMessages, 2000);
+                });
+            });
+        }
+
+        function addMsgEl(message) {
+            const mine = message.sender_id === meId;
+            const div = document.createElement('div');
+            div.className = `message ${mine ? 'user' : 'bot'}`;
+            div.innerHTML = `
+                <div class="message-avatar">${mine ? '<i class="fas fa-user"></i>' : '<i class="fas fa-user"></i>'}</div>
+                <div class="message-content"><p>${message.content}</p></div>
+            `;
+            chatBody.appendChild(div);
+        }
+
+        async function loadMessages() {
+            if (!selectedUserId) return;
+            const res = await fetch(`/connect/messages?user_id=${selectedUserId}`);
+            const data = await res.json();
+            if (!data.success) return;
+            chatBody.innerHTML = '';
+            data.messages.forEach(addMsgEl);
+            chatBody.scrollTop = chatBody.scrollHeight;
+        }
+
+        async function sendMessage() {
+            const text = msgInput.value.trim();
+            if (!text || !selectedUserId) return;
+            msgInput.value = '';
+            await fetch('/connect/send', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ receiver_id: selectedUserId, content: text })
+            });
+            loadMessages();
+        }
+
+        msgInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+        sendBtn.addEventListener('click', sendMessage);
+
+        loadUsers();
+    </script>
+</body>
+</html>
+

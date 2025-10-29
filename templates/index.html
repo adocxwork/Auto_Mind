@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto_Mind - AI Car Price Prediction</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/" class="active">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect">Connect</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="floating-elements">
+            <i class="fas fa-car floating-element" style="font-size: 4rem;"></i>
+            <i class="fas fa-chart-line floating-element" style="font-size: 3rem;"></i>
+            <i class="fas fa-robot floating-element" style="font-size: 3.5rem;"></i>
+        </div>
+        
+        <div class="hero-content">
+            <h1>Welcome to Auto_Mind</h1>
+            <p>The future of car price prediction powered by advanced AI algorithms. Get accurate, instant valuations for any vehicle with just a few clicks.</p>
+            <div class="hero-buttons">
+                <a href="/predict_page" class="btn btn-primary">
+                    <i class="fas fa-calculator"></i> Predict Price Now
+                </a>
+                <a href="/about" class="btn btn-secondary">
+                    <i class="fas fa-info-circle"></i> Learn More
+                </a>
+            </div>
+        </div>
+        
+        <div class="scroll-indicator" onclick="document.querySelector('.features').scrollIntoView({behavior: 'smooth'})">
+            <i class="fas fa-chevron-down"></i>
+        </div>
+    </section>
+
+    <section class="features">
+        <div class="features-header">
+            <h2>Why Choose Auto_Mind?</h2>
+            <p style="color: var(--text-muted); font-size: 1.2rem;">Experience the power of AI-driven car valuations</p>
+        </div>
+        
+        <div class="features-grid">
+            <div class="feature-card">
+                <i class="fas fa-brain feature-icon"></i>
+                <h3>AI-Powered Accuracy</h3>
+                <p>Our machine learning algorithms analyze thousands of data points to provide the most accurate price predictions in the market.</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-bolt feature-icon"></i>
+                <h3>Lightning Fast</h3>
+                <p>Get instant results in seconds. No more waiting hours or days for professional appraisals.</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-chart-trending-up feature-icon"></i>
+                <h3>Market Trends</h3>
+                <p>Stay ahead with real-time market analysis and trends that affect your car's value.</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-shield-alt feature-icon"></i>
+                <h3>Trusted Results</h3>
+                <p>Backed by extensive data validation and continuous model improvement for reliable predictions.</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-mobile-alt feature-icon"></i>
+                <h3>Mobile Friendly</h3>
+                <p>Access Auto_Mind from any device, anywhere. Fully responsive design for all screen sizes.</p>
+            </div>
+            
+            <div class="feature-card">
+                <i class="fas fa-lock feature-icon"></i>
+                <h3>Secure & Private</h3>
+                <p>Your data is protected with enterprise-grade security. We never store personal information.</p>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta">
+        <div class="cta-content">
+            <h2>Ready to Discover Your Car's True Value?</h2>
+            <p>Join thousands of satisfied users who trust Auto_Mind for accurate car price predictions</p>
+            <a href="/predict_page" class="btn btn-primary" style="font-size: 1.2rem; padding: 1rem 2rem;">
+                <i class="fas fa-rocket"></i> Start Prediction
+            </a>
+        </div>
+    </section>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Set current year
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                const icon = mobileToggle.querySelector('i');
+                icon.classList.add('fa-bars');
+                icon.classList.remove('fa-times');
+            });
+        });
+
+        // Intersection Observer for animations
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.animation = 'fadeInUp 0.8s ease-out forwards';
+                }
+            });
+        }, observerOptions);
+
+        // Observe feature cards
+        document.querySelectorAll('.feature-card').forEach(card => {
+            observer.observe(card);
+        });
+
+        // Add hover effects
+        document.querySelectorAll('.feature-card').forEach(card => {
+            card.addEventListener('mouseenter', function() {
+                this.style.transform = 'translateY(-10px) scale(1.02)';
+            });
+            
+            card.addEventListener('mouseleave', function() {
+                this.style.transform = 'translateY(0) scale(1)';
+            });
+        });
+    </script>
+</body>
+</html>

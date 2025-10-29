@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact - Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact" class="active">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect">Connect</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1>Contact Us</h1>
+        
+        <div class="content">
+            <h2><i class="fas fa-envelope"></i> Get in Touch</h2>
+            <p>Have questions about our car price prediction service? We'd love to hear from you. Send us a message and we'll respond as soon as possible.</p>
+        </div>
+        
+        <div class="content">
+            <h2><i class="fas fa-map-marker-alt"></i> Contact Information</h2>
+            <p><strong>Email:</strong> info@automind.com</p>
+            <p><strong>Phone:</strong> +1 (555) 123-4567</p>
+            <p><strong>Address:</strong> 123 AI Street, Tech City, TC 12345</p>
+        </div>
+        
+        <div class="content">
+            <h2><i class="fas fa-clock"></i> Business Hours</h2>
+            <p><strong>Monday - Friday:</strong> 9:00 AM - 6:00 PM</p>
+            <p><strong>Saturday:</strong> 10:00 AM - 4:00 PM</p>
+            <p><strong>Sunday:</strong> Closed</p>
+        </div>
+        
+        <div class="content">
+            <h2><i class="fas fa-comments"></i> Support</h2>
+            <p>For technical support or questions about our AI prediction model, please contact our support team at support@automind.com</p>
+        </div>
+        
+        <div class="content">
+            <h2><i class="fas fa-share-alt"></i> Follow Us</h2>
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p style="margin-top: 1rem; color: var(--text-muted);">Stay connected with us on social media for updates and news!</p>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Set current year
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                const icon = mobileToggle.querySelector('i');
+                icon.classList.add('fa-bars');
+                icon.classList.remove('fa-times');
+            });
+        });
+    </script>
+</body>
+</html>

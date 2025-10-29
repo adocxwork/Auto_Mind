@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Services - Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services" class="active">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect">Connect</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1>Our Services</h1>
+        
+        <div class="services-grid">
+            <div class="service-card">
+                <i class="fas fa-calculator service-icon"></i>
+                <h3>Car Price Prediction</h3>
+                <p>Get accurate AI-powered price predictions for any vehicle based on comprehensive market data analysis.</p>
+            </div>
+            
+            <div class="service-card">
+                <i class="fas fa-chart-line service-icon"></i>
+                <h3>Market Analysis</h3>
+                <p>Access real-time market trends and insights to understand how various factors affect car values.</p>
+            </div>
+            
+            <div class="service-card">
+                <i class="fas fa-database service-icon"></i>
+                <h3>Data Insights</h3>
+                <p>Comprehensive automotive data analysis with detailed breakdowns of pricing factors.</p>
+            </div>
+            
+            <div class="service-card">
+                <i class="fas fa-mobile-alt service-icon"></i>
+                <h3>Mobile Access</h3>
+                <p>Use our platform from any device with our responsive, mobile-optimized interface.</p>
+            </div>
+            
+            <div class="service-card">
+                <i class="fas fa-shield-alt service-icon"></i>
+                <h3>Secure Platform</h3>
+                <p>Enterprise-grade security ensuring your data and predictions remain private and protected.</p>
+            </div>
+            
+            <div class="service-card">
+                <i class="fas fa-headset service-icon"></i>
+                <h3>24/7 Support</h3>
+                <p>Round-the-clock customer support to help you with any questions or technical issues.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Set current year
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Close mobile menu when clicking on a link
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                navLinks.classList.remove('active');
+                const icon = mobileToggle.querySelector('i');
+                icon.classList.add('fa-bars');
+                icon.classList.remove('fa-times');
+            });
+        });
+    </script>
+</body>
+</html>

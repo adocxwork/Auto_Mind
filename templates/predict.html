@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Price Prediction - Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page" class="active">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect">Connect</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="predict-container">
+        <div class="predict-header">
+            <h1><i class="fas fa-calculator"></i> Car Price Predictor</h1>
+            <p>Get accurate AI-powered price predictions for your vehicle</p>
+        </div>
+
+        <form class="prediction-form" id="predictionForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="company">
+                        <i class="fas fa-industry"></i> Select Company
+                    </label>
+                    <select class="form-control" id="company" name="company" required>
+                        <option value="">Choose Company</option>
+                        {% for company in companies %}
+                        <option value="{{ company }}">{{ company }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="car_model">
+                        <i class="fas fa-car"></i> Select Model
+                    </label>
+                    <select class="form-control" id="car_model" name="car_model" required>
+                        <option value="">First select a company</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="year">
+                        <i class="fas fa-calendar"></i> Year of Purchase
+                    </label>
+                    <select class="form-control" id="year" name="year" required>
+                        <option value="">Select Year</option>
+                        {% for year in years %}
+                        <option value="{{ year }}">{{ year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="fuel_type">
+                        <i class="fas fa-gas-pump"></i> Fuel Type
+                    </label>
+                    <select class="form-control" id="fuel_type" name="fuel_type" required>
+                        <option value="">Select Fuel Type</option>
+                        {% for fuel in fuel_types %}
+                        <option value="{{ fuel }}">{{ fuel }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="kms_driven">
+                    <i class="fas fa-tachometer-alt"></i> Kilometers Driven
+                </label>
+                <input 
+                    type="number" 
+                    class="form-control" 
+                    id="kms_driven" 
+                    name="kms_driven" 
+                    placeholder="Enter kilometers driven (e.g., 45000)"
+                    min="0"
+                    required
+                >
+            </div>
+
+            <div class="loading" id="loading">
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+                <div class="loading-dot"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary" id="predictBtn">
+                <i class="fas fa-magic"></i> Predict Price
+            </button>
+        </form>
+
+        <div class="result-section" id="resultSection">
+            <h3><i class="fas fa-chart-line"></i> Prediction Result</h3>
+            <div class="result-price" id="resultPrice"></div>
+            <p id="resultMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        // Mobile menu toggle
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        // Company change handler - load models
+        document.getElementById('company').addEventListener('change', async function() {
+            const company = this.value;
+            const modelSelect = document.getElementById('car_model');
+            
+            if (!company) {
+                modelSelect.innerHTML = '<option value="">First select a company</option>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/get_models/${encodeURIComponent(company)}`);
+                const models = await response.json();
+                
+                modelSelect.innerHTML = '<option value="">Select Model</option>';
+                models.forEach(model => {
+                    modelSelect.innerHTML += `<option value="${model}">${model}</option>`;
+                });
+            } catch (error) {
+                console.error('Error loading models:', error);
+                modelSelect.innerHTML = '<option value="">Error loading models</option>';
+            }
+        });
+
+        // Form submission
+        document.getElementById('predictionForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const loading = document.getElementById('loading');
+            const predictBtn = document.getElementById('predictBtn');
+            const resultSection = document.getElementById('resultSection');
+            
+            // Show loading
+            loading.classList.add('active');
+            predictBtn.disabled = true;
+            predictBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Predicting...';
+            resultSection.classList.remove('show', 'error');
+            
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    document.getElementById('resultPrice').textContent = data.formatted_price;
+                    document.getElementById('resultMessage').textContent = 
+                        'Based on the provided information, this is the estimated market value of your vehicle.';
+                    resultSection.classList.add('show');
+                } else {
+                    throw new Error(data.error || 'Prediction failed');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('resultPrice').textContent = 'Error';
+                document.getElementById('resultMessage').textContent = 
+                    'Sorry, we could not predict the price. Please check your inputs and try again.';
+                resultSection.classList.add('show', 'error');
+            } finally {
+                // Hide loading
+                loading.classList.remove('active');
+                predictBtn.disabled = false;
+                predictBtn.innerHTML = '<i class="fas fa-magic"></i> Predict Price';
+            }
+        });
+
+        // Input animations
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('focus', function() {
+                this.style.transform = 'translateY(-2px)';
+            });
+            
+            input.addEventListener('blur', function() {
+                this.style.transform = 'translateY(0)';
+            });
+        });
+    </script>
+</body>
+</html>
