@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chats - Auto_Mind</title>
+    <title>Connect - Auto_Mind</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
@@ -18,8 +18,7 @@
                 <li><a href="/services">Services</a></li>
                 <li><a href="/contact">Contact</a></li>
                 <li><a href="/about">About</a></li>
-                <li><a href="/profile">Profile</a></li>
-                <li><a href="/logout">Logout ({{ session.get('username') }})</a></li>
+                <li><a href="/connect" class="active">Connect</a></li>
             </ul>
             <button class="mobile-toggle" id="mobileToggle">
                 <i class="fas fa-bars"></i>
@@ -28,20 +27,30 @@
     </nav>
 
     <div class="container">
-        <h1>Start a Chat</h1>
-        <div class="services-grid">
-            {% for u in users %}
-            <div class="service-card">
-                <i class="fas fa-user service-icon"></i>
-                <h3>{{ u['username'] }}</h3>
-                <p>Type: {{ u['user_type'] }}</p>
-                <a class="btn btn-primary" href="/chat_with/{{ u['id'] }}">Open Chat</a>
+        <h1>Connect</h1>
+        <div class="content" style="text-align:center">
+            <p>Login or create an account to connect with Customers, Mechanics, and Car Dealers.</p>
+            <div style="display:flex; gap:1rem; justify-content:center; margin-top:1rem; flex-wrap:wrap;">
+                <a class="btn btn-primary" href="/connect/login"><i class="fas fa-sign-in-alt"></i> Login</a>
+                <a class="btn btn-secondary" href="/connect/signup"><i class="fas fa-user-plus"></i> Sign Up</a>
             </div>
-            {% endfor %}
         </div>
     </div>
 
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
     <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
         const mobileToggle = document.getElementById('mobileToggle');
         const navLinks = document.getElementById('navLinks');
         mobileToggle.addEventListener('click', () => {
@@ -53,5 +62,4 @@
     </script>
 </body>
 </html>
-
 

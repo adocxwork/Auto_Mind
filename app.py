@@ -1,10 +1,9 @@
 import os
 import pickle
-import sqlite3
-from datetime import datetime
 import pandas as pd
 import numpy as np
-from flask import Flask, render_template, request, jsonify, redirect, url_for, session, abort
+from flask import Flask, render_template, request, jsonify, redirect, url_for, session
+import sqlite3
 import google.generativeai as genai
 from markdown import markdown
 import re
@@ -19,7 +18,7 @@ except ImportError:
     APP_PORT = 5000
 
 app = Flask(__name__)
-app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key')
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'app.db')
 
@@ -29,37 +28,38 @@ def get_db_connection():
     return conn
 
 def init_db():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password TEXT NOT NULL,
-            user_type TEXT NOT NULL CHECK(user_type IN ('customer','mechanic','car_dealer')),
-            upi_id TEXT
-        );
-        """
-    )
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS messages (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            sender_id INTEGER NOT NULL,
-            receiver_id INTEGER NOT NULL,
-            message TEXT NOT NULL,
-            created_at TEXT NOT NULL,
-            FOREIGN KEY(sender_id) REFERENCES users(id),
-            FOREIGN KEY(receiver_id) REFERENCES users(id)
-        );
-        """
-    )
-    conn.commit()
-    conn.close()
-
-# Initialize database once at startup (compatible with Flask 3.x)
-init_db()
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                account_type TEXT NOT NULL CHECK(account_type IN ('Customer','Mechanic','Car Dealer')),
+                upi_id TEXT NOT NULL,
+                password TEXT NOT NULL
+            )
+            """
+        )
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS messages (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                sender_id INTEGER NOT NULL,
+                receiver_id INTEGER NOT NULL,
+                content TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(sender_id) REFERENCES users(id),
+                FOREIGN KEY(receiver_id) REFERENCES users(id)
+            )
+            """
+        )
+        conn.commit()
+        conn.close()
+        print("SQLite database initialized.")
+    except Exception as e:
+        print(f"DB init error: {e}")
 
 # Load the trained model
 try:
@@ -91,22 +91,15 @@ except Exception as e:
     years = []
     company_models = {}
 
-# Configure AI API (non-fatal if it fails)
-ai_model = None
+# Configure AI API
 if AK and AK != "your_ai_api_key_here":
-    try:
-        genai.configure(api_key=AK)
-        # Use a safe default model; if unavailable, fall back cleanly
-        try:
-            ai_model = genai.GenerativeModel('gemini-pro')
-        except Exception:
-            ai_model = genai.GenerativeModel('gemini-pro-latest')
-        print("AI API configured successfully!")
-    except Exception as e:
-        print(f"AI init failed, continuing without chatbot: {e}")
+    genai.configure(api_key=AK)
+    ai_model = genai.GenerativeModel('gemini-pro-latest')
+    print("AI API configured successfully!")
 else:
     print("AK not configured. Chatbot functionality will be limited.")
     print("To enable chatbot: Edit config.py and add your AI API key")
+    ai_model = None
 
 @app.route('/')
 def home():
@@ -135,158 +128,148 @@ def contact():
 def chatbot():
     return render_template('chatbot.html')
 
-# -------------------- Authentication & Profiles --------------------
+# -------------------- Connect (Auth + Chat) --------------------
+@app.route('/connect')
+def connect_home():
+    if 'user_id' in session:
+        return redirect(url_for('connect_chat'))
+    return render_template('connect_home.html')
 
-@app.route('/register', methods=['GET', 'POST'])
-def register():
+@app.route('/connect/signup', methods=['GET', 'POST'])
+def connect_signup():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
+        account_type = request.form.get('account_type', '').strip()
+        upi_id = request.form.get('upi_id', '').strip()
         password = request.form.get('password', '').strip()
-        user_type = request.form.get('user_type', '').strip()
-        if not username or not password or user_type not in ['customer','mechanic','car_dealer']:
-            return render_template('register.html', error='All fields are required.', username=username)
+
+        if not all([username, account_type, upi_id, password]):
+            return render_template('connect_signup.html', error='All fields are required.')
+
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            cur.execute('INSERT INTO users (username, password, user_type) VALUES (?,?,?)',
-                        (username, password, user_type))
+            cur.execute(
+                'INSERT INTO users (username, account_type, upi_id, password) VALUES (?, ?, ?, ?)',
+                (username, account_type, upi_id, password)
+            )
             conn.commit()
+            user_id = cur.lastrowid
             conn.close()
-            return redirect(url_for('login'))
+            session['user_id'] = user_id
+            return redirect(url_for('connect_chat'))
         except sqlite3.IntegrityError:
-            return render_template('register.html', error='Username already exists.', username=username)
-    return render_template('register.html')
+            return render_template('connect_signup.html', error='Username already exists.',
+                                   username=username, account_type=account_type, upi_id=upi_id)
+        except Exception as e:
+            return render_template('connect_signup.html', error='Error creating account.')
 
-@app.route('/login', methods=['GET', 'POST'])
-def login():
+    return render_template('connect_signup.html')
+
+@app.route('/connect/login', methods=['GET', 'POST'])
+def connect_login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '').strip()
         conn = get_db_connection()
         cur = conn.cursor()
-        cur.execute('SELECT id, username, password, user_type, upi_id FROM users WHERE username = ?', (username,))
+        cur.execute('SELECT * FROM users WHERE username = ? AND password = ?', (username, password))
         user = cur.fetchone()
         conn.close()
-        if user and user['password'] == password:
+        if user:
             session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['user_type'] = user['user_type']
-            return redirect(url_for('home'))
-        return render_template('login.html', error='Invalid credentials.', username=username)
-    return render_template('login.html')
+            return redirect(url_for('connect_chat'))
+        return render_template('connect_login.html', error='Invalid credentials.', username=username)
+    return render_template('connect_login.html')
 
-@app.route('/logout')
-def logout():
+@app.route('/connect/logout')
+def connect_logout():
     session.clear()
-    return redirect(url_for('home'))
+    return redirect(url_for('connect_home'))
 
-@app.route('/profile', methods=['GET', 'POST'])
-def profile():
+@app.route('/connect/delete_account', methods=['POST'])
+def connect_delete_account():
     if 'user_id' not in session:
-        return redirect(url_for('login'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    if request.method == 'POST':
-        upi_id = request.form.get('upi_id', '').strip()
-        cur.execute('UPDATE users SET upi_id = ? WHERE id = ?', (upi_id, session['user_id']))
+        return redirect(url_for('connect_login'))
+    me_id = session['user_id']
+    try:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        cur.execute('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', (me_id, me_id))
+        cur.execute('DELETE FROM users WHERE id = ?', (me_id,))
         conn.commit()
-    cur.execute('SELECT id, username, user_type, upi_id FROM users WHERE id = ?', (session['user_id'],))
-    user = cur.fetchone()
-    conn.close()
-    return render_template('profile.html', user=user)
-
-@app.route('/delete_account', methods=['POST'])
-def delete_account():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    user_id = session['user_id']
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # Delete messages related to the user, then the user
-    cur.execute('DELETE FROM messages WHERE sender_id = ? OR receiver_id = ?', (user_id, user_id))
-    cur.execute('DELETE FROM users WHERE id = ?', (user_id,))
-    conn.commit()
-    conn.close()
-    session.clear()
-    return redirect(url_for('home'))
-
-# -------------------- User Listings --------------------
-
-@app.route('/mechanics')
-def mechanics():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, username, user_type, IFNULL(upi_id,'') as upi_id FROM users WHERE user_type='mechanic' ORDER BY username")
-    users = cur.fetchall()
-    conn.close()
-    return render_template('users.html', title='Mechanics', users=users)
-
-@app.route('/dealers')
-def dealers():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute("SELECT id, username, user_type, IFNULL(upi_id,'') as upi_id FROM users WHERE user_type='car_dealer' ORDER BY username")
-    users = cur.fetchall()
-    conn.close()
-    return render_template('users.html', title='Car Dealers', users=users)
-
-# -------------------- Simple User-to-User Chat --------------------
-
-def require_login():
-    if 'user_id' not in session:
-        return False
-    return True
-
-@app.route('/chat_users')
-def chat_users():
-    if not require_login():
-        return redirect(url_for('login'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT id, username, user_type FROM users WHERE id != ? ORDER BY username', (session['user_id'],))
-    users = cur.fetchall()
-    conn.close()
-    return render_template('chat_users.html', users=users)
-
-@app.route('/chat_with/<int:other_id>', methods=['GET', 'POST'])
-def chat_with(other_id):
-    if not require_login():
-        return redirect(url_for('login'))
-    conn = get_db_connection()
-    cur = conn.cursor()
-    # Load all other users for sidebar
-    cur.execute('SELECT id, username, user_type FROM users WHERE id != ? ORDER BY username', (session['user_id'],))
-    sidebar_users = cur.fetchall()
-    # Validate other user exists
-    cur.execute('SELECT id, username FROM users WHERE id = ?', (other_id,))
-    other = cur.fetchone()
-    if not other:
         conn.close()
-        abort(404)
-    if request.method == 'POST':
-        message = request.form.get('message', '').strip()
-        if message:
-            cur.execute(
-                'INSERT INTO messages (sender_id, receiver_id, message, created_at) VALUES (?,?,?,?)',
-                (session['user_id'], other_id, message, datetime.utcnow().isoformat())
-            )
-            conn.commit()
-    # Load history (both directions)
+    finally:
+        session.clear()
+    return redirect(url_for('connect_home'))
+
+@app.route('/connect/chat')
+def connect_chat():
+    if 'user_id' not in session:
+        return redirect(url_for('connect_login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT id, username, account_type, upi_id FROM users ORDER BY username ASC')
+    users = cur.fetchall()
+    cur.execute('SELECT id, username, account_type, upi_id FROM users WHERE id = ?', (session['user_id'],))
+    me = cur.fetchone()
+    conn.close()
+    return render_template('connect_chat.html', users=users, me=me)
+
+@app.route('/connect/users')
+def connect_users():
+    if 'user_id' not in session:
+        return jsonify([])
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT id, username, account_type, upi_id FROM users ORDER BY username ASC')
+    users = [dict(u) for u in cur.fetchall()]
+    conn.close()
+    return jsonify(users)
+
+@app.route('/connect/messages')
+def connect_get_messages():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    other_id = request.args.get('user_id', type=int)
+    if not other_id:
+        return jsonify({'success': False, 'error': 'user_id is required'}), 400
+    me_id = session['user_id']
+    conn = get_db_connection()
+    cur = conn.cursor()
     cur.execute(
         """
-        SELECT m.id, m.sender_id, m.receiver_id, m.message, m.created_at,
-               su.username AS sender_name, ru.username AS receiver_name
+        SELECT m.id, m.sender_id, m.receiver_id, m.content, m.created_at,
+               su.username AS sender_username, su.account_type AS sender_type, su.upi_id AS sender_upi,
+               ru.username AS receiver_username, ru.account_type AS receiver_type, ru.upi_id AS receiver_upi
         FROM messages m
         JOIN users su ON su.id = m.sender_id
         JOIN users ru ON ru.id = m.receiver_id
         WHERE (m.sender_id = ? AND m.receiver_id = ?) OR (m.sender_id = ? AND m.receiver_id = ?)
-        ORDER BY m.id ASC
+        ORDER BY m.created_at ASC, m.id ASC
         """,
-        (session['user_id'], other_id, other_id, session['user_id'])
+        (me_id, other_id, other_id, me_id)
     )
-    messages = cur.fetchall()
+    rows = cur.fetchall()
     conn.close()
-    return render_template('chat.html', other=other, messages=messages, users=sidebar_users)
+    return jsonify({'success': True, 'messages': [dict(r) for r in rows]})
+
+@app.route('/connect/send', methods=['POST'])
+def connect_send_message():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    data = request.get_json(force=True)
+    receiver_id = data.get('receiver_id')
+    content = (data.get('content') or '').strip()
+    if not receiver_id or not content:
+        return jsonify({'success': False, 'error': 'receiver_id and content are required'}), 400
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO messages (sender_id, receiver_id, content) VALUES (?, ?, ?)',
+                (session['user_id'], int(receiver_id), content))
+    conn.commit()
+    conn.close()
+    return jsonify({'success': True})
 
 @app.route('/get_models/<company>')
 def get_models(company):
@@ -388,4 +371,5 @@ def chat():
 if __name__ == '__main__':
     import os
     port = int(os.environ.get('PORT', APP_PORT))
+    init_db()
     app.run(debug=False, host='0.0.0.0', port=port)

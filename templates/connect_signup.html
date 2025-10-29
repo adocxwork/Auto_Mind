@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign Up - Connect | Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect" class="active">Connect</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="predict-container" style="max-width:600px;">
+        <div class="predict-header">
+            <h1><i class="fas fa-user-plus"></i> Create Account</h1>
+            <p>Join the community and start connecting</p>
+        </div>
+        {% if error %}
+        <div class="result-section error show" style="text-align:center;">
+            <div class="result-price">{{ error }}</div>
+        </div>
+        {% endif %}
+        <form class="prediction-form" method="post">
+            <div class="form-group">
+                <label class="form-label" for="username"><i class="fas fa-user"></i> Username</label>
+                <input class="form-control" id="username" name="username" required value="{{ username or '' }}">
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="account_type"><i class="fas fa-id-card"></i> Account Type</label>
+                    <select class="form-control" id="account_type" name="account_type" required>
+                        <option value="">Select Type</option>
+                        <option value="Customer" {% if account_type=='Customer' %}selected{% endif %}>Customer</option>
+                        <option value="Mechanic" {% if account_type=='Mechanic' %}selected{% endif %}>Mechanic</option>
+                        <option value="Car Dealer" {% if account_type=='Car Dealer' %}selected{% endif %}>Car Dealer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="upi_id"><i class="fas fa-indian-rupee-sign"></i> UPI ID</label>
+                    <input class="form-control" id="upi_id" name="upi_id" required value="{{ upi_id or '' }}" placeholder="name@bank">
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label" for="password"><i class="fas fa-lock"></i> Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-user-plus"></i> Create Account</button>
+            <div style="text-align:center; margin-top:1rem; color: var(--text-muted);">
+                Already have an account? <a href="/connect/login">Login</a>
+            </div>
+        </form>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+    </script>
+</body>
+</html>
+

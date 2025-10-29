@@ -27,6 +27,7 @@ body {
     color: var(--text);
     line-height: 1.6;
     overflow-x: hidden;
+    overflow-y: scroll;
     min-height: 100vh;
 }
 
@@ -589,6 +590,7 @@ footer {
     max-width: 1000px;
     margin: 2rem auto;
     padding: 2rem;
+    animation: fadeInUp 0.8s ease-out;
 }
 
 .container h1 {
@@ -679,6 +681,118 @@ footer {
 .chatbot-page {
     min-height: calc(100vh - 200px);
     padding: 2rem;
+    animation: fadeInUp 0.8s ease-out;
+}
+
+/* Connect Chat Layout */
+.connect-chat {
+    max-width: 1100px;
+    margin: 1.5rem auto;
+    background: var(--card);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 16px;
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: 70vh;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+}
+
+.connect-chat .sidebar {
+    border-right: 1px solid rgba(0, 212, 255, 0.15);
+    display: flex;
+    flex-direction: column;
+}
+
+.connect-chat .sidebar-header {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.connect-chat .sidebar .me {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.connect-chat .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gradient);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+}
+
+.connect-chat .meta .name { font-weight: 700; }
+.connect-chat .meta .sub { color: var(--text-muted); font-size: 0.85rem; }
+
+.connect-chat .logout {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+}
+
+.connect-chat .logout:hover { color: var(--accent); }
+
+.connect-chat .user-list {
+    overflow-y: auto;
+    padding: 0.5rem;
+}
+
+.connect-chat .user-item {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.6rem 0.75rem;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.connect-chat .user-item:hover { background: rgba(255,255,255,0.05); }
+
+.connect-chat .user-item .info .name { font-weight: 600; }
+.connect-chat .user-item .info .sub { color: var(--text-muted); font-size: 0.85rem; }
+
+.connect-chat .chat-main { display: flex; flex-direction: column; min-height: 0; }
+.connect-chat .chat-header {
+    padding: 1rem;
+    border-bottom: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+.connect-chat .chat-header .chat-with { font-weight: 700; font-size: 1.1rem; }
+.connect-chat .chat-header .sub { color: var(--text-muted); font-size: 0.9rem; }
+
+.connect-chat .chat-body {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+/* Keep chat messages static in Connect (no slide animation on new render) */
+.connect-chat .message {
+    animation: none;
+}
+
+.connect-chat .chat-input-row {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    border-top: 1px solid rgba(0, 212, 255, 0.15);
+}
+
+.connect-chat .chat-input {
+    flex: 1;
+}
+
+@media (max-width: 900px) {
+    .connect-chat { grid-template-columns: 1fr; }
+    .connect-chat .sidebar { display: none; }
 }
 
 .chatbot-header {
