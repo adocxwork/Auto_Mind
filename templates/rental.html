@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Car Rental - Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+                <li><a href="/connect">Connect</a></li>
+                <li><a href="/rental" class="active">Car Rental</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="rental-container">
+        <div class="predict-header">
+            <h1><i class="fas fa-car-side"></i> Car Rental Service</h1>
+            <p>Rent cars from owners or list your car for rent</p>
+        </div>
+
+        <div class="rental-actions">
+            <button class="btn btn-primary" onclick="showAvailableCars()">
+                <i class="fas fa-search"></i> Browse Available Cars
+            </button>
+            <button class="btn btn-secondary" onclick="showAddCarForm()">
+                <i class="fas fa-plus"></i> List Your Car
+            </button>
+            <button class="btn btn-secondary" onclick="showMyBookings()">
+                <i class="fas fa-calendar"></i> My Bookings
+            </button>
+        </div>
+
+        <!-- Add Car Form -->
+        <div id="addCarForm" class="booking-form" style="display:none;">
+            <h3><i class="fas fa-plus-circle"></i> List Your Car for Rent</h3>
+            <form id="carForm" onsubmit="addCar(event)">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="rent_company">Company</label>
+                        <select class="form-control" id="rent_company" name="company" required>
+                            <option value="">Select Company</option>
+                            {% for company in companies %}
+                            <option value="{{ company }}">{{ company }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="rent_model">Model</label>
+                        <input type="text" class="form-control" id="rent_model" name="model" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="rent_year">Year</label>
+                        <input type="number" class="form-control" id="rent_year" name="year" min="1990" max="2024" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="rent_fuel">Fuel Type</label>
+                        <select class="form-control" id="rent_fuel" name="fuel_type" required>
+                            <option value="">Select Fuel Type</option>
+                            {% for fuel in fuel_types %}
+                            <option value="{{ fuel }}">{{ fuel }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="rent_price">Price per Day (₹)</label>
+                        <input type="number" class="form-control" id="rent_price" name="price_per_day" min="0" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="rent_address">Location Address</label>
+                        <input type="text" class="form-control" id="rent_address" name="address" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="rent_lat">Latitude</label>
+                        <input type="number" step="any" class="form-control" id="rent_lat" name="latitude">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="rent_lng">Longitude</label>
+                        <input type="number" step="any" class="form-control" id="rent_lng" name="longitude">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="rent_description">Description</label>
+                    <textarea class="form-control" id="rent_description" name="description" rows="3"></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> List Car
+                </button>
+            </form>
+        </div>
+
+        <!-- Available Cars -->
+        <div id="carsSection">
+            <h3 style="margin-bottom:1.5rem;"><i class="fas fa-list"></i> Available Cars for Rent</h3>
+            <div id="carsGrid" class="car-grid"></div>
+            <div id="noCars" style="display:none; text-align:center; padding:3rem; color:var(--text-muted);">
+                <i class="fas fa-car" style="font-size:4rem; margin-bottom:1rem;"></i>
+                <h3>No cars available for rent</h3>
+            </div>
+        </div>
+
+        <!-- Booking Modal -->
+        <div id="bookingModal" class="booking-form" style="display:none;">
+            <h3><i class="fas fa-calendar-check"></i> Book Car</h3>
+            <form id="bookingForm" onsubmit="bookCar(event)">
+                <input type="hidden" id="book_car_id">
+                <div class="form-group">
+                    <label class="form-label" for="start_date">Start Date</label>
+                    <input type="date" class="form-control" id="start_date" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="end_date">End Date</label>
+                    <input type="date" class="form-control" id="end_date" required>
+                </div>
+                <div id="bookingTotal" style="margin:1rem 0; padding:1rem; background:rgba(16,185,129,0.1); border-radius:8px; text-align:center;">
+                    <strong>Total Amount: ₹0</strong>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check"></i> Confirm Booking
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeBookingModal()" style="margin-left:1rem;">
+                    Cancel
+                </button>
+            </form>
+        </div>
+
+        <!-- My Bookings -->
+        <div id="myBookings" style="display:none;">
+            <h3 style="margin-bottom:1.5rem;"><i class="fas fa-calendar"></i> My Bookings</h3>
+            <div id="bookingsList"></div>
+        </div>
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        function showAvailableCars() {
+            document.getElementById('addCarForm').style.display = 'none';
+            document.getElementById('myBookings').style.display = 'none';
+            document.getElementById('carsSection').style.display = 'block';
+            loadAvailableCars();
+        }
+
+        function showAddCarForm() {
+            document.getElementById('carsSection').style.display = 'none';
+            document.getElementById('myBookings').style.display = 'none';
+            document.getElementById('addCarForm').style.display = 'block';
+        }
+
+        function showMyBookings() {
+            document.getElementById('carsSection').style.display = 'none';
+            document.getElementById('addCarForm').style.display = 'none';
+            document.getElementById('myBookings').style.display = 'block';
+            loadMyBookings();
+        }
+
+        async function loadAvailableCars() {
+            try {
+                const response = await fetch('/api/rental/cars');
+                const data = await response.json();
+                const carsGrid = document.getElementById('carsGrid');
+                const noCars = document.getElementById('noCars');
+
+                if (data.success && data.cars.length > 0) {
+                    carsGrid.innerHTML = data.cars.map(car => `
+                        <div class="car-card">
+                            <img src="${car.image_url || 'https://via.placeholder.com/400x300/667eea/ffffff?text=' + car.company}" alt="${car.company}" class="car-image">
+                            <div class="car-info">
+                                <h3>${car.company} ${car.model}</h3>
+                                <div class="car-price">₹${parseFloat(car.price_per_day).toLocaleString('en-IN')}/day</div>
+                                <div class="car-details"><i class="fas fa-calendar"></i> ${car.year}</div>
+                                <div class="car-details"><i class="fas fa-gas-pump"></i> ${car.fuel_type}</div>
+                                <div class="car-details"><i class="fas fa-map-marker-alt"></i> ${car.location_address || 'Location not specified'}</div>
+                                <div class="car-details"><i class="fas fa-user"></i> Owner: ${car.owner_name}</div>
+                                <button class="btn btn-primary" onclick="openBookingModal(${car.id}, ${car.price_per_day})" style="margin-top:1rem; width:100%;">
+                                    <i class="fas fa-calendar-check"></i> Book Now
+                                </button>
+                            </div>
+                        </div>
+                    `).join('');
+                    noCars.style.display = 'none';
+                } else {
+                    carsGrid.innerHTML = '';
+                    noCars.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        function openBookingModal(carId, pricePerDay) {
+            document.getElementById('book_car_id').value = carId;
+            document.getElementById('bookingModal').style.display = 'block';
+            document.getElementById('start_date').addEventListener('change', updateBookingTotal);
+            document.getElementById('end_date').addEventListener('change', updateBookingTotal);
+            
+            function updateBookingTotal() {
+                const start = new Date(document.getElementById('start_date').value);
+                const end = new Date(document.getElementById('end_date').value);
+                if (start && end && end >= start) {
+                    const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+                    const total = days * pricePerDay;
+                    document.getElementById('bookingTotal').innerHTML = `<strong>Total Amount: ₹${total.toLocaleString('en-IN')}</strong>`;
+                }
+            }
+        }
+
+        function closeBookingModal() {
+            document.getElementById('bookingModal').style.display = 'none';
+            document.getElementById('bookingForm').reset();
+        }
+
+        async function bookCar(event) {
+            event.preventDefault();
+            const carId = document.getElementById('book_car_id').value;
+            const startDate = document.getElementById('start_date').value;
+            const endDate = document.getElementById('end_date').value;
+
+            try {
+                const response = await fetch('/api/rental/book', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        car_id: carId,
+                        start_date: startDate,
+                        end_date: endDate
+                    })
+                });
+                const data = await response.json();
+                if (data.success) {
+                    alert('Booking successful!');
+                    closeBookingModal();
+                    loadMyBookings();
+                } else {
+                    alert('Booking failed: ' + (data.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error booking car. Please make sure you are logged in.');
+            }
+        }
+
+        async function addCar(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const data = Object.fromEntries(formData);
+
+            try {
+                const response = await fetch('/api/rental/add_car', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                if (result.success) {
+                    alert('Car listed successfully!');
+                    event.target.reset();
+                    showAvailableCars();
+                } else {
+                    alert('Failed to list car: ' + (result.error || 'Unknown error'));
+                }
+            } catch (error) {
+                alert('Error listing car. Please make sure you are logged in.');
+            }
+        }
+
+        async function loadMyBookings() {
+            try {
+                const response = await fetch('/api/rental/my_bookings');
+                const data = await response.json();
+                const bookingsList = document.getElementById('bookingsList');
+
+                if (data.success && data.bookings.length > 0) {
+                    bookingsList.innerHTML = data.bookings.map(booking => `
+                        <div class="car-card">
+                            <div class="car-info">
+                                <h3>${booking.company} ${booking.model} (${booking.year})</h3>
+                                <div class="car-details"><i class="fas fa-calendar"></i> ${booking.start_date} to ${booking.end_date}</div>
+                                <div class="car-price">Total: ₹${parseFloat(booking.total_amount).toLocaleString('en-IN')}</div>
+                                <div class="car-details"><i class="fas fa-user"></i> Owner: ${booking.owner_name}</div>
+                                <div class="car-details"><i class="fas fa-map-marker-alt"></i> ${booking.location_address || 'Location not specified'}</div>
+                                <div class="car-details" style="margin-top:0.5rem;"><strong>Status: ${booking.status}</strong></div>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    bookingsList.innerHTML = '<p style="text-align:center; color:var(--text-muted);">No bookings found.</p>';
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Load available cars on page load
+        loadAvailableCars();
+    </script>
+</body>
+</html>
+
+
+

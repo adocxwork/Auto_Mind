@@ -176,8 +176,12 @@
                 
                 if (data.success) {
                     document.getElementById('resultPrice').textContent = data.formatted_price;
-                    document.getElementById('resultMessage').textContent = 
-                        'Based on the provided information, this is the estimated market value of your vehicle.';
+                    let message = 'Based on the provided information, this is the estimated market value of your vehicle.';
+                    if (data.warning) {
+                        message += ' Note: ' + data.warning;
+                        resultSection.classList.add('warning');
+                    }
+                    document.getElementById('resultMessage').textContent = message;
                     resultSection.classList.add('show');
                 } else {
                     throw new Error(data.error || 'Prediction failed');

@@ -1028,6 +1028,250 @@ footer {
     }
 }
 
+/* Authentication Section */
+.auth-section {
+    padding: 4rem 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.auth-container {
+    background: var(--card);
+    padding: 3rem;
+    border-radius: 20px;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.auth-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.auth-header h2 {
+    font-size: 2.5rem;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 1rem;
+}
+
+.auth-header p {
+    color: var(--text-muted);
+    font-size: 1.2rem;
+}
+
+.auth-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.auth-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2.5rem;
+    border-radius: 15px;
+    text-align: center;
+    border: 2px solid rgba(0, 212, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.auth-card:hover {
+    transform: translateY(-10px);
+    border-color: var(--accent);
+    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+}
+
+.auth-icon {
+    font-size: 4rem;
+    color: var(--accent);
+    margin-bottom: 1rem;
+}
+
+.auth-card h3 {
+    font-size: 1.8rem;
+    margin-bottom: 1.5rem;
+    color: var(--text);
+}
+
+.feature-list {
+    list-style: none;
+    text-align: left;
+    margin: 1.5rem 0;
+    padding: 0;
+}
+
+.feature-list li {
+    padding: 0.75rem 0;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.feature-list i {
+    color: var(--success);
+    font-size: 1.2rem;
+}
+
+.auth-login {
+    text-align: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.auth-login a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.auth-login a:hover {
+    text-decoration: underline;
+}
+
+/* Recommendations Page */
+.recommendations-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+.price-filter {
+    background: var(--card);
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.price-range-inputs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.car-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.car-card {
+    position: relative;
+    background: var(--card);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.car-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
+}
+
+.car-image {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+    background: var(--secondary);
+}
+
+.car-info {
+    padding: 1.5rem;
+}
+
+.car-info h3 {
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.car-price {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--success);
+    margin: 0.5rem 0;
+}
+
+.car-details {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin: 0.25rem 0;
+}
+
+/* Mechanic Finder */
+.mechanic-container {
+    max-width: 1000px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+.location-section {
+    background: var(--card);
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.mechanic-list {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.mechanic-card {
+    background: var(--card);
+    padding: 1.5rem;
+    border-radius: 15px;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.mechanic-card:hover {
+    border-color: var(--accent);
+    transform: translateX(5px);
+}
+
+.mechanic-info h3 {
+    color: var(--accent);
+    margin-bottom: 0.5rem;
+}
+
+.mechanic-distance {
+    color: var(--success);
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* Rental Page */
+.rental-container {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 2rem;
+}
+
+.rental-actions {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.booking-form {
+    background: var(--card);
+    padding: 2rem;
+    border-radius: 15px;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-links {
@@ -1123,5 +1367,18 @@ footer {
     .send-button {
         width: 100%;
         justify-content: center;
+    }
+
+    .auth-cards {
+        grid-template-columns: 1fr;
+    }
+
+    .car-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .mechanic-card {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
