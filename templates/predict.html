@@ -14,11 +14,12 @@
             <ul class="nav-links" id="navLinks">
                 <li><a href="/">Home</a></li>
                 <li><a href="/predict_page" class="active">Predict</a></li>
+                <li><a href="/connect">Connect</a></li>
+                <li><a href="/rent_buy">Rent/Buy</a></li>
                 <li><a href="/chatbot">ChatBot</a></li>
                 <li><a href="/services">Services</a></li>
                 <li><a href="/contact">Contact</a></li>
                 <li><a href="/about">About</a></li>
-                <li><a href="/connect">Connect</a></li>
             </ul>
             <button class="mobile-toggle" id="mobileToggle">
                 <i class="fas fa-bars"></i>
@@ -113,6 +114,130 @@
             <div class="result-price" id="resultPrice"></div>
             <p id="resultMessage"></p>
         </div>
+
+        <section class="emi-section" aria-labelledby="emiSectionTitle">
+            <div class="emi-header">
+                <div>
+                    <h2 id="emiSectionTitle"><i class="fas fa-coins"></i> EMI Calculator</h2>
+                    <p>Plan your car finance with real-time EMI insights</p>
+                </div>
+                <div class="emi-tag">
+                    <i class="fas fa-mobile-alt"></i>
+                    <span>Responsive & Real-time</span>
+                </div>
+            </div>
+
+            <div class="emi-grid">
+                <form class="emi-card" id="emiForm">
+                    <div class="form-group">
+                        <label class="form-label" for="loanAmount">
+                            <i class="fas fa-rupee-sign"></i> Loan Amount
+                        </label>
+                        <div class="input-with-prefix">
+                            <span>₹</span>
+                            <input
+                                type="number"
+                                class="form-control"
+                                id="loanAmount"
+                                name="loan_amount"
+                                placeholder="e.g., 800000"
+                                min="10000"
+                                step="1000"
+                                required
+                            >
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label class="form-label" for="interestRate">
+                                <i class="fas fa-percentage"></i> Annual Interest Rate
+                            </label>
+                            <div class="input-with-prefix">
+                                <span>%</span>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="interestRate"
+                                    name="interest_rate"
+                                    placeholder="e.g., 9.5"
+                                    min="1"
+                                    max="20"
+                                    step="0.1"
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="loanTenure">
+                                <i class="fas fa-calendar-alt"></i> Loan Tenure (Years)
+                            </label>
+                            <div class="input-with-prefix">
+                                <span>Y</span>
+                                <input
+                                    type="number"
+                                    class="form-control"
+                                    id="loanTenure"
+                                    name="loan_tenure"
+                                    placeholder="e.g., 5"
+                                    min="1"
+                                    max="10"
+                                    step="1"
+                                    required
+                                >
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-equals"></i> Calculate EMI
+                    </button>
+
+                    <p class="emi-hint">
+                        Tip: Use your predicted price as the loan amount to instantly compare affordability.
+                    </p>
+                </form>
+
+                <div class="emi-summary" id="emiSummary">
+                    <div class="summary-chip">
+                        <span class="chip-label">Monthly EMI</span>
+                        <p class="summary-value" id="emiValue">₹0</p>
+                    </div>
+
+                    <div class="summary-grid">
+                        <div class="summary-card">
+                            <p class="summary-label">Total Interest</p>
+                            <p class="summary-amount" id="totalInterest">₹0</p>
+                        </div>
+                        <div class="summary-card">
+                            <p class="summary-label">Total Payment</p>
+                            <p class="summary-amount" id="totalPayment">₹0</p>
+                        </div>
+                        <div class="summary-card">
+                            <p class="summary-label">Tenure</p>
+                            <p class="summary-amount" id="tenureLabel">0 Months</p>
+                        </div>
+                    </div>
+
+                    <div class="progress-wrapper">
+                        <div class="progress-labels">
+                            <span>Principal</span>
+                            <span>Interest</span>
+                        </div>
+                        <div class="progress-bar">
+                            <span class="principal-bar" id="principalBar"></span>
+                            <span class="interest-bar" id="interestBar"></span>
+                        </div>
+                    </div>
+
+                    <ul class="emi-tips">
+                        <li><i class="fas fa-check-circle"></i> Adjust tenure to keep EMI within 35% of monthly income.</li>
+                        <li><i class="fas fa-check-circle"></i> Higher down payments reduce total interest outgo.</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
     </div>
 
     <script>
@@ -175,13 +300,15 @@
                 const data = await response.json();
                 
                 if (data.success) {
-                    document.getElementById('resultPrice').textContent = data.formatted_price;
-                    let message = 'Based on the provided information, this is the estimated market value of your vehicle.';
-                    if (data.warning) {
-                        message += ' Note: ' + data.warning;
-                        resultSection.classList.add('warning');
+                    const priceText = data.formatted_price || 'N/A';
+                    const messageText = data.message || 'Based on the provided information, this is the estimated market value of your vehicle.';
+
+                    document.getElementById('resultPrice').textContent = data.formatted_price ? priceText : '';
+                    document.getElementById('resultMessage').textContent = messageText;
+
+                    if (!data.formatted_price) {
+                        document.getElementById('resultPrice').textContent = 'No market value';
                     }
-                    document.getElementById('resultMessage').textContent = message;
                     resultSection.classList.add('show');
                 } else {
                     throw new Error(data.error || 'Prediction failed');
@@ -209,6 +336,70 @@
             input.addEventListener('blur', function() {
                 this.style.transform = 'translateY(0)';
             });
+        });
+
+        // EMI calculator
+        const emiForm = document.getElementById('emiForm');
+        const emiValue = document.getElementById('emiValue');
+        const totalInterest = document.getElementById('totalInterest');
+        const totalPayment = document.getElementById('totalPayment');
+        const tenureLabel = document.getElementById('tenureLabel');
+        const principalBar = document.getElementById('principalBar');
+        const interestBar = document.getElementById('interestBar');
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-IN', {
+                style: 'currency',
+                currency: 'INR',
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function updateEmiSummary(principal, rate, years) {
+            const months = years * 12;
+            const monthlyRate = rate / (12 * 100);
+            let emi = 0;
+
+            if (rate === 0) {
+                emi = principal / months;
+            } else {
+                const factor = Math.pow(1 + monthlyRate, months);
+                emi = (principal * monthlyRate * factor) / (factor - 1);
+            }
+
+            const totalPayable = emi * months;
+            const interestPayable = totalPayable - principal;
+
+            emiValue.textContent = isFinite(emi) ? formatCurrency(emi) : '₹0';
+            totalInterest.textContent = isFinite(interestPayable) ? formatCurrency(interestPayable) : '₹0';
+            totalPayment.textContent = isFinite(totalPayable) ? formatCurrency(totalPayable) : '₹0';
+            tenureLabel.textContent = `${months} Months`;
+
+            const principalPercent = Math.min((principal / totalPayable) * 100, 100) || 0;
+            const interestPercent = Math.min((interestPayable / totalPayable) * 100, 100) || 0;
+
+            principalBar.style.width = `${principalPercent}%`;
+            interestBar.style.width = `${interestPercent}%`;
+        }
+
+        function handleEmiCalculation(event) {
+            if (event) event.preventDefault();
+
+            const principal = parseFloat(document.getElementById('loanAmount').value);
+            const rate = parseFloat(document.getElementById('interestRate').value);
+            const tenure = parseFloat(document.getElementById('loanTenure').value);
+
+            if (!principal || !rate || !tenure) {
+                return;
+            }
+
+            updateEmiSummary(principal, rate, tenure);
+        }
+
+        emiForm?.addEventListener('submit', handleEmiCalculation);
+        emiForm?.addEventListener('input', () => {
+            // Debounce-like simple check to avoid NaN flicker
+            handleEmiCalculation();
         });
     </script>
 </body>

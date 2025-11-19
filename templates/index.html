@@ -14,14 +14,12 @@
             <ul class="nav-links" id="navLinks">
                 <li><a href="/" class="active">Home</a></li>
                 <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/connect">Connect</a></li>
+                <li><a href="/rent_buy">Rent/Buy</a></li>
                 <li><a href="/chatbot">ChatBot</a></li>
                 <li><a href="/services">Services</a></li>
                 <li><a href="/contact">Contact</a></li>
                 <li><a href="/about">About</a></li>
-                <li><a href="/connect">Connect</a></li>
-                <li><a href="/find_mechanics">Find Mechanics</a></li>
-                <li><a href="/rental">Car Rental</a></li>
-                <li><a href="/booking">Car Booking</a></li>
             </ul>
             <button class="mobile-toggle" id="mobileToggle">
                 <i class="fas fa-bars"></i>
@@ -43,9 +41,6 @@
                 <a href="/predict_page" class="btn btn-primary">
                     <i class="fas fa-calculator"></i> Predict Price Now
                 </a>
-                <a href="/recommendations" class="btn btn-primary">
-                    <i class="fas fa-search"></i> Find Cars
-                </a>
                 <a href="/about" class="btn btn-secondary">
                     <i class="fas fa-info-circle"></i> Learn More
                 </a>
@@ -54,53 +49,6 @@
         
         <div class="scroll-indicator" onclick="document.querySelector('.features').scrollIntoView({behavior: 'smooth'})">
             <i class="fas fa-chevron-down"></i>
-        </div>
-    </section>
-
-    <!-- Authentication Section -->
-    <section class="auth-section">
-        <div class="auth-container">
-            <div class="auth-header">
-                <h2>Join Auto_Mind Today</h2>
-                <p>Choose your account type and unlock exclusive features</p>
-            </div>
-            <div class="auth-cards">
-                <div class="auth-card customer-card">
-                    <div class="auth-icon">
-                        <i class="fas fa-user"></i>
-                    </div>
-                    <h3>Customer</h3>
-                    <ul class="feature-list">
-                        <li><i class="fas fa-check-circle"></i> Car Price Predictions</li>
-                        <li><i class="fas fa-check-circle"></i> Find Nearest Mechanics</li>
-                        <li><i class="fas fa-check-circle"></i> Car Recommendations</li>
-                        <li><i class="fas fa-check-circle"></i> Rent Cars from Owners</li>
-                        <li><i class="fas fa-check-circle"></i> AI Chatbot Support</li>
-                    </ul>
-                    <a href="/connect/signup?type=Customer" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i> Sign Up as Customer
-                    </a>
-                </div>
-                <div class="auth-card mechanic-card">
-                    <div class="auth-icon">
-                        <i class="fas fa-tools"></i>
-                    </div>
-                    <h3>Mechanic</h3>
-                    <ul class="feature-list">
-                        <li><i class="fas fa-check-circle"></i> Get Discovered by Customers</li>
-                        <li><i class="fas fa-check-circle"></i> Location-Based Visibility</li>
-                        <li><i class="fas fa-check-circle"></i> Direct Customer Messaging</li>
-                        <li><i class="fas fa-check-circle"></i> Manage Your Profile</li>
-                        <li><i class="fas fa-check-circle"></i> Build Your Reputation</li>
-                    </ul>
-                    <a href="/connect/signup?type=Mechanic" class="btn btn-primary">
-                        <i class="fas fa-tools"></i> Sign Up as Mechanic
-                    </a>
-                </div>
-            </div>
-            <div class="auth-login">
-                <p>Already have an account? <a href="/connect/login">Login here</a></p>
-            </div>
         </div>
     </section>
 

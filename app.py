@@ -1,4 +1,5 @@
 import os
+import pickle
 import pandas as pd
 import numpy as np
 from flask import Flask, render_template, request, jsonify, redirect, url_for, session
@@ -6,7 +7,7 @@ import sqlite3
 import google.generativeai as genai
 from markdown import markdown
 import re
-from math import radians, sin, cos, sqrt, atan2
+from datetime import datetime
 
 # Import configuration
 try:
@@ -15,7 +16,7 @@ except ImportError:
     # Fallback to environment variables if config.py doesn't exist
     AK = os.getenv('AK')
     APP_HOST = '0.0.0.0'
-    APP_PORT = 5000 
+    APP_PORT = 5000
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('FLASK_SECRET_KEY', 'dev-secret-key')
@@ -27,7 +28,7 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-def init_db(): 
+def init_db():
     try:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -38,23 +39,10 @@ def init_db():
                 username TEXT UNIQUE NOT NULL,
                 account_type TEXT NOT NULL CHECK(account_type IN ('Customer','Mechanic','Car Dealer')),
                 upi_id TEXT NOT NULL,
-                password TEXT NOT NULL,
-                latitude REAL,
-                longitude REAL,
-                address TEXT,
-                phone TEXT
+                password TEXT NOT NULL
             )
             """
         )
-        # Add location columns if they don't exist
-        try:
-            cur.execute("ALTER TABLE users ADD COLUMN latitude REAL")
-            cur.execute("ALTER TABLE users ADD COLUMN longitude REAL")
-            cur.execute("ALTER TABLE users ADD COLUMN address TEXT")
-            cur.execute("ALTER TABLE users ADD COLUMN phone TEXT")
-        except sqlite3.OperationalError:
-            pass  # Columns already exist
-        
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS messages (
@@ -70,74 +58,16 @@ def init_db():
         )
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS cars_for_rent (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                owner_id INTEGER NOT NULL,
-                company TEXT NOT NULL,
-                model TEXT NOT NULL,
-                year INTEGER NOT NULL,
-                fuel_type TEXT NOT NULL,
-                price_per_day REAL NOT NULL,
-                location_latitude REAL,
-                location_longitude REAL,
-                location_address TEXT,
-                description TEXT,
-                image_url TEXT,
-                available INTEGER DEFAULT 1,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(owner_id) REFERENCES users(id)
-            )
-            """
-        )
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS rental_bookings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                car_id INTEGER NOT NULL,
-                customer_id INTEGER NOT NULL,
-                start_date DATE NOT NULL,
-                end_date DATE NOT NULL,
-                total_amount REAL NOT NULL,
-                status TEXT DEFAULT 'pending' CHECK(status IN ('pending','confirmed','completed','cancelled')),
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(car_id) REFERENCES cars_for_rent(id),
-                FOREIGN KEY(customer_id) REFERENCES users(id)
-            )
-            """
-        )
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS custom_car_recommendations (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                company TEXT NOT NULL,
-                model TEXT NOT NULL,
-                year INTEGER NOT NULL,
-                fuel_type TEXT NOT NULL,
-                price REAL NOT NULL,
-                kms_driven INTEGER DEFAULT 0,
-                image_url TEXT,
-                description TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-            """
-        )
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS cars_for_sale (
+            CREATE TABLE IF NOT EXISTS cars (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 dealer_id INTEGER NOT NULL,
-                company TEXT NOT NULL,
-                model TEXT NOT NULL,
+                car_name TEXT NOT NULL,
+                brand TEXT NOT NULL,
                 year INTEGER NOT NULL,
-                fuel_type TEXT NOT NULL,
+                listing_type TEXT NOT NULL CHECK(listing_type IN ('Sell', 'Rent')),
                 price REAL NOT NULL,
-                kms_driven INTEGER NOT NULL,
-                location_latitude REAL,
-                location_longitude REAL,
-                location_address TEXT,
+                photo_url TEXT,
                 description TEXT,
-                image_url TEXT,
-                available INTEGER DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY(dealer_id) REFERENCES users(id)
             )
@@ -145,19 +75,17 @@ def init_db():
         )
         cur.execute(
             """
-            CREATE TABLE IF NOT EXISTS car_bookings (
+            CREATE TABLE IF NOT EXISTS car_requests (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 car_id INTEGER NOT NULL,
                 customer_id INTEGER NOT NULL,
-                booking_date DATE NOT NULL,
-                booking_time TIME NOT NULL,
-                contact_phone TEXT NOT NULL,
-                contact_email TEXT,
-                message TEXT,
-                status TEXT DEFAULT 'pending' CHECK(status IN ('pending','confirmed','completed','cancelled')),
+                dealer_id INTEGER NOT NULL,
+                request_type TEXT NOT NULL CHECK(request_type IN ('Buy', 'Rent')),
+                status TEXT NOT NULL DEFAULT 'Pending' CHECK(status IN ('Pending', 'Accepted', 'Rejected')),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY(car_id) REFERENCES cars_for_sale(id),
-                FOREIGN KEY(customer_id) REFERENCES users(id)
+                FOREIGN KEY(car_id) REFERENCES cars(id),
+                FOREIGN KEY(customer_id) REFERENCES users(id),
+                FOREIGN KEY(dealer_id) REFERENCES users(id)
             )
             """
         )
@@ -167,7 +95,13 @@ def init_db():
     except Exception as e:
         print(f"DB init error: {e}")
 
-# Model removed - using dataset-based prediction only
+# Load the trained model
+try:
+    model = pickle.load(open('LinearRegressionModel.pkl', 'rb'))
+    print("Model loaded successfully!")
+except Exception as e:
+    print(f"Error loading model: {e}")
+    model = None
 
 # Load the cleaned dataset to get unique values for dropdowns
 try:
@@ -184,12 +118,8 @@ try:
     for company in companies:
         company_models[company] = sorted(df[df['company'] == company]['name'].unique().tolist())
     
-    print("Dataset and company models loaded successfully!")
-    
 except Exception as e:
     print(f"Error loading dataset: {e}")
-    import traceback
-    traceback.print_exc()
     companies = []
     fuel_types = []
     years = []
@@ -246,22 +176,16 @@ def connect_signup():
         account_type = request.form.get('account_type', '').strip()
         upi_id = request.form.get('upi_id', '').strip()
         password = request.form.get('password', '').strip()
-        latitude = request.form.get('latitude', '').strip()
-        longitude = request.form.get('longitude', '').strip()
-        address = request.form.get('address', '').strip()
-        phone = request.form.get('phone', '').strip()
 
         if not all([username, account_type, upi_id, password]):
-            return render_template('connect_signup.html', error='All required fields are missing.')
+            return render_template('connect_signup.html', error='All fields are required.')
 
         try:
             conn = get_db_connection()
             cur = conn.cursor()
-            lat_val = float(latitude) if latitude else None
-            lng_val = float(longitude) if longitude else None
             cur.execute(
-                'INSERT INTO users (username, account_type, upi_id, password, latitude, longitude, address, phone) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                (username, account_type, upi_id, password, lat_val, lng_val, address, phone)
+                'INSERT INTO users (username, account_type, upi_id, password) VALUES (?, ?, ?, ?)',
+                (username, account_type, upi_id, password)
             )
             conn.commit()
             user_id = cur.lastrowid
@@ -272,11 +196,9 @@ def connect_signup():
             return render_template('connect_signup.html', error='Username already exists.',
                                    username=username, account_type=account_type, upi_id=upi_id)
         except Exception as e:
-            print(f"Signup error: {e}")
             return render_template('connect_signup.html', error='Error creating account.')
 
-    account_type = request.args.get('type', '')
-    return render_template('connect_signup.html', account_type=account_type)
+    return render_template('connect_signup.html')
 
 @app.route('/connect/login', methods=['GET', 'POST'])
 def connect_login():
@@ -390,104 +312,44 @@ def get_models(company):
         return jsonify(company_models[company])
     return jsonify([])
 
-def predict_price_from_dataset(company, car_model, year, kms_driven, fuel_type):
-    """Predict car price using dataset statistics and intelligent calculations"""
-    try:
-        # Filter dataset for similar cars - try exact match first
-        filtered = df[
-            (df['company'] == company) & 
-            (df['name'] == car_model) & 
-            (df['fuel_type'] == fuel_type)
-        ]
-        
-        if len(filtered) == 0:
-            # Try with just company and fuel type
-            filtered = df[
-                (df['company'] == company) & 
-                (df['fuel_type'] == fuel_type)
-            ]
-        
-        if len(filtered) == 0:
-            # Try with just company
-            filtered = df[df['company'] == company]
-        
-        if len(filtered) == 0:
-            return None
-        
-        # Calculate price based on similar cars with intelligent adjustments
-        base_price = filtered['Price'].median()
-        
-        # Adjust for year (newer cars are more expensive, older depreciate)
-        year_factor = 1.0
-        median_year = filtered['year'].median()
-        if year > median_year:
-            year_diff = year - median_year
-            year_factor = 1.0 + (year_diff * 0.025)  # 2.5% per year newer
-        elif year < median_year:
-            year_diff = median_year - year
-            year_factor = 1.0 - (year_diff * 0.035)  # 3.5% depreciation per year older
-        
-        # Adjust for kilometers driven
-        km_factor = 1.0
-        avg_km = filtered['kms_driven'].median()
-        if kms_driven > avg_km:
-            km_diff = kms_driven - avg_km
-            km_factor = 1.0 - (km_diff / 100000 * 0.12)  # 12% per 100k km
-        elif kms_driven < avg_km:
-            km_diff = avg_km - kms_driven
-            km_factor = 1.0 + (km_diff / 100000 * 0.06)  # 6% bonus per 100k km less
-        
-        # Calculate final estimated price
-        estimated_price = base_price * year_factor * max(km_factor, 0.25)  # Min 25% of base
-        return max(estimated_price, 0)
-    except Exception as e:
-        print(f"Prediction error: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
-
 @app.route('/predict', methods=['POST'])
 def predict():
-    """Handle car price prediction using dataset-based intelligent calculation"""
+    """Handle car price prediction"""
     try:
+        if model is None:
+            return jsonify({'success': False, 'error': 'Model not loaded'})
+        
         # Get form data
-        company = request.form.get('company', '').strip()
-        car_model = request.form.get('car_model', '').strip()
-        year_str = request.form.get('year', '').strip()
-        kms_driven_str = request.form.get('kms_driven', '').strip()
-        fuel_type = request.form.get('fuel_type', '').strip()
+        company = request.form.get('company')
+        car_model = request.form.get('car_model')
+        year = int(request.form.get('year'))
+        kms_driven = int(request.form.get('kms_driven'))
+        fuel_type = request.form.get('fuel_type')
         
         # Validate inputs
-        if not all([company, car_model, year_str, kms_driven_str, fuel_type]):
+        if not all([company, car_model, year, kms_driven, fuel_type]):
             return jsonify({'success': False, 'error': 'All fields are required'})
         
-        try:
-            year = int(year_str)
-            kms_driven = int(kms_driven_str)
-        except ValueError:
-            return jsonify({'success': False, 'error': 'Year and kilometers must be valid numbers'})
+        # Create prediction input
+        prediction_data = pd.DataFrame([[
+            car_model,
+            company,
+            year,
+            kms_driven,
+            fuel_type
+        ]], columns=['name', 'company', 'year', 'kms_driven', 'fuel_type'])
         
-        # Validate year range
-        if year < 1900 or year > 2100:
-            return jsonify({'success': False, 'error': 'Invalid year. Please enter a year between 1900 and 2100.'})
-        
-        # Validate kms_driven
-        if kms_driven < 0:
-            return jsonify({'success': False, 'error': 'Kilometers driven must be a positive number'})
-        
-        # Make prediction using dataset-based method
-        predicted_price = predict_price_from_dataset(company, car_model, year, kms_driven, fuel_type)
-        
-        if predicted_price is None:
+        # Make prediction
+        predicted_price = model.predict(prediction_data)[0]
+
+        # Handle negative predictions
+        if predicted_price < 0:
             return jsonify({
-                'success': False, 
-                'error': 'Could not find similar cars in our database. Please try different specifications.'
+                'success': True,
+                'predicted_price': None,
+                'formatted_price': None,
+                'message': 'This car does not have any value.'
             })
-        
-        # Ensure reasonable range
-        predicted_price = float(predicted_price)
-        predicted_price = max(0, predicted_price)
-        predicted_price = min(predicted_price, 50000000)  # Cap at 5 crores
         
         # Format the price
         formatted_price = f"₹{predicted_price:,.0f}"
@@ -495,426 +357,12 @@ def predict():
         return jsonify({
             'success': True,
             'predicted_price': predicted_price,
-            'formatted_price': formatted_price
+            'formatted_price': formatted_price,
+            'message': 'Based on the provided information, this is the estimated market value of your vehicle.'
         })
         
     except Exception as e:
         print(f"Prediction error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': f'An error occurred: {str(e)}'})
-
-@app.route('/recommendations')
-def recommendations():
-    """Car recommendation page with price ranges"""
-    return render_template('recommendations.html', 
-                         companies=companies, 
-                         fuel_types=fuel_types, 
-                         years=years)
-
-@app.route('/api/recommendations', methods=['GET'])
-def api_recommendations():
-    """Get car recommendations based on price range"""
-    try:
-        min_price = float(request.args.get('min_price', 0))
-        max_price = float(request.args.get('max_price', 10000000))
-        
-        # Check what price column exists in the dataset
-        price_col = None
-        for col in ['selling_price', 'price', 'Price', 'Selling_Price']:
-            if col in df.columns:
-                price_col = col
-                break
-        
-        if price_col:
-            filtered_df = df[(df[price_col] >= min_price) & (df[price_col] <= max_price)]
-        else:
-            # If no price column, use prediction model to estimate prices
-            # Sample from all cars and predict their prices
-            sampled_df = df.sample(min(100, len(df)))
-            predictions = []
-            for _, row in sampled_df.iterrows():
-                try:
-                    prediction_data = pd.DataFrame([[
-                        row['name'],
-                        row['company'],
-                        row['year'],
-                        row['kms_driven'],
-                        row['fuel_type']
-                    ]], columns=['name', 'company', 'year', 'kms_driven', 'fuel_type'])
-                    pred_price = predict_price_from_dataset(
-                        row['name'], row['company'], row['year'], 
-                        row['kms_driven'], row['fuel_type']
-                    )
-                    if pred_price is None:
-                        continue
-                    pred_price = max(0, pred_price)
-                    if min_price <= pred_price <= max_price:
-                        # Convert Series to dict and add predicted price
-                        row_dict = row.to_dict()
-                        row_dict['predicted_price'] = pred_price
-                        predictions.append(row_dict)
-                except:
-                    continue
-            
-            # Create DataFrame from predictions
-            if predictions:
-                filtered_df = pd.DataFrame(predictions)
-                price_col = 'predicted_price'
-            else:
-                filtered_df = pd.DataFrame()
-                price_col = None
-        
-        # Sample cars and add image URLs
-        recommendations = []
-        sample_size = min(20, len(filtered_df))
-        if sample_size > 0:
-            sampled_df = filtered_df.sample(n=sample_size) if len(filtered_df) > sample_size else filtered_df
-            for _, row in sampled_df.iterrows():
-                # Generate image URL - using Unsplash for car images
-                car_query = f"{row['company'].lower().replace(' ', '+')}+{row['name'].lower().replace(' ', '+')}"
-                image_url = f"https://source.unsplash.com/400x300/?car,{car_query}"
-                
-                # Fallback to placeholder if needed
-                if not image_url or image_url.startswith('https://via'):
-                    image_url = f"https://via.placeholder.com/400x300/667eea/ffffff?text={row['company']}+{row['name']}"
-                
-                price_value = float(row[price_col]) if price_col in row else 0
-                
-                recommendations.append({
-                    'company': row['company'],
-                    'model': row['name'],
-                    'year': int(row['year']),
-                    'fuel_type': row['fuel_type'],
-                    'kms_driven': int(row['kms_driven']),
-                    'price': price_value,
-                    'image_url': image_url,
-                    'is_custom': False
-                })
-        
-        # Also include custom cars not in the dataset
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute("""
-                SELECT company, model, year, fuel_type, price, kms_driven, image_url, description
-                FROM custom_car_recommendations
-                WHERE price >= ? AND price <= ?
-                ORDER BY created_at DESC
-            """, (min_price, max_price))
-            custom_cars = cur.fetchall()
-            conn.close()
-            
-            for car in custom_cars:
-                # Generate image URL if not provided
-                image_url = car['image_url']
-                if not image_url:
-                    car_query = f"{car['company'].lower().replace(' ', '+')}+{car['model'].lower().replace(' ', '+')}"
-                    image_url = f"https://source.unsplash.com/400x300/?car,{car_query}"
-                    if not image_url or image_url.startswith('https://via'):
-                        image_url = f"https://via.placeholder.com/400x300/667eea/ffffff?text={car['company']}+{car['model']}"
-                
-                recommendations.append({
-                    'company': car['company'],
-                    'model': car['model'],
-                    'year': int(car['year']),
-                    'fuel_type': car['fuel_type'],
-                    'kms_driven': int(car['kms_driven'] or 0),
-                    'price': float(car['price']),
-                    'image_url': image_url,
-                    'is_custom': True,
-                    'description': car['description'] or ''
-                })
-        except Exception as e:
-            print(f"Error fetching custom cars: {e}")
-        
-        # Limit total recommendations to 30 (mix of dataset and custom cars)
-        if len(recommendations) > 30:
-            recommendations = recommendations[:30]
-        
-        return jsonify({'success': True, 'recommendations': recommendations})
-    except Exception as e:
-        print(f"Recommendation error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/recommendations/add_custom', methods=['POST'])
-def api_add_custom_car():
-    """Add a custom car recommendation not in the dataset"""
-    try:
-        data = request.get_json()
-        
-        # Validate required fields
-        required_fields = ['company', 'model', 'year', 'fuel_type', 'price']
-        for field in required_fields:
-            if not data.get(field):
-                return jsonify({'success': False, 'error': f'{field} is required'}), 400
-        
-        company = data.get('company').strip()
-        model = data.get('model').strip()
-        year = int(data.get('year'))
-        fuel_type = data.get('fuel_type').strip()
-        price = float(data.get('price'))
-        kms_driven = int(data.get('kms_driven', 0))
-        image_url = data.get('image_url', '').strip()
-        description = data.get('description', '').strip()
-        
-        # Validate year
-        if year < 1900 or year > 2100:
-            return jsonify({'success': False, 'error': 'Invalid year'}), 400
-        
-        # Validate price
-        if price < 0:
-            return jsonify({'success': False, 'error': 'Price must be positive'}), 400
-        
-        # Generate image URL if not provided
-        if not image_url:
-            car_query = f"{company.lower().replace(' ', '+')}+{model.lower().replace(' ', '+')}"
-            image_url = f"https://source.unsplash.com/400x300/?car,{car_query}"
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO custom_car_recommendations 
-            (company, model, year, fuel_type, price, kms_driven, image_url, description)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """, (company, model, year, fuel_type, price, kms_driven, image_url, description))
-        conn.commit()
-        car_id = cur.lastrowid
-        conn.close()
-        
-        return jsonify({'success': True, 'car_id': car_id, 'message': 'Custom car added successfully'})
-    except ValueError as e:
-        return jsonify({'success': False, 'error': f'Invalid data format: {str(e)}'}), 400
-    except Exception as e:
-        print(f"Add custom car error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)}), 500
-
-@app.route('/find_mechanics')
-def find_mechanics():
-    """Find nearest mechanics page"""
-    if 'user_id' not in session:
-        return redirect(url_for('connect_login'))
-    return render_template('find_mechanics.html')
-
-@app.route('/api/nearby_mechanics', methods=['GET'])
-def api_nearby_mechanics():
-    """Find nearby mechanics based on location"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        user_lat = float(request.args.get('latitude', 0))
-        user_lng = float(request.args.get('longitude', 0))
-        max_distance = float(request.args.get('max_distance', 50))  # km
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT id, username, account_type, latitude, longitude, address, phone, upi_id
-            FROM users 
-            WHERE account_type = 'Mechanic' 
-            AND latitude IS NOT NULL 
-            AND longitude IS NOT NULL
-        """)
-        mechanics = cur.fetchall()
-        conn.close()
-        
-        nearby_mechanics = []
-        for mechanic in mechanics:
-            if mechanic['latitude'] and mechanic['longitude']:
-                # Calculate distance using Haversine formula
-                lat1, lon1 = radians(user_lat), radians(user_lng)
-                lat2, lon2 = radians(mechanic['latitude']), radians(mechanic['longitude'])
-                
-                dlat = lat2 - lat1
-                dlon = lon2 - lon1
-                
-                a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-                c = 2 * atan2(sqrt(a), sqrt(1-a))
-                distance = 6371 * c  # Earth radius in km
-                
-                if distance <= max_distance:
-                    nearby_mechanics.append({
-                        'id': mechanic['id'],
-                        'username': mechanic['username'],
-                        'address': mechanic['address'] or 'Address not provided',
-                        'phone': mechanic['phone'] or 'Phone not provided',
-                        'distance': round(distance, 2),
-                        'latitude': mechanic['latitude'],
-                        'longitude': mechanic['longitude']
-                    })
-        
-        # Sort by distance
-        nearby_mechanics.sort(key=lambda x: x['distance'])
-        
-        return jsonify({'success': True, 'mechanics': nearby_mechanics})
-    except Exception as e:
-        print(f"Mechanic finder error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/update_location', methods=['POST'])
-def update_location():
-    """Update user location"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        data = request.get_json()
-        latitude = float(data.get('latitude', 0))
-        longitude = float(data.get('longitude', 0))
-        address = data.get('address', '')
-        phone = data.get('phone', '')
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            UPDATE users 
-            SET latitude = ?, longitude = ?, address = ?, phone = ?
-            WHERE id = ?
-        """, (latitude, longitude, address, phone, session['user_id']))
-        conn.commit()
-        conn.close()
-        
-        return jsonify({'success': True})
-    except Exception as e:
-        print(f"Location update error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/rental')
-def rental_home():
-    """Car rental service home page"""
-    return render_template('rental.html', companies=companies, fuel_types=fuel_types)
-
-@app.route('/api/rental/cars', methods=['GET'])
-def api_rental_cars():
-    """Get available cars for rent"""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT c.*, u.username as owner_name
-            FROM cars_for_rent c
-            JOIN users u ON c.owner_id = u.id
-            WHERE c.available = 1
-            ORDER BY c.created_at DESC
-        """)
-        cars = cur.fetchall()
-        conn.close()
-        
-        return jsonify({'success': True, 'cars': [dict(car) for car in cars]})
-    except Exception as e:
-        print(f"Rental cars error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/rental/add_car', methods=['POST'])
-def api_add_rental_car():
-    """Add a car for rent"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        data = request.get_json()
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            INSERT INTO cars_for_rent 
-            (owner_id, company, model, year, fuel_type, price_per_day, 
-             location_latitude, location_longitude, location_address, description, image_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            session['user_id'],
-            data.get('company'),
-            data.get('model'),
-            int(data.get('year')),
-            data.get('fuel_type'),
-            float(data.get('price_per_day')),
-            float(data.get('latitude', 0)),
-            float(data.get('longitude', 0)),
-            data.get('address', ''),
-            data.get('description', ''),
-            data.get('image_url', f"https://via.placeholder.com/400x300/667eea/ffffff?text={data.get('company')}")
-        ))
-        conn.commit()
-        car_id = cur.lastrowid
-        conn.close()
-        
-        return jsonify({'success': True, 'car_id': car_id})
-    except Exception as e:
-        print(f"Add rental car error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/rental/book', methods=['POST'])
-def api_rental_book():
-    """Book a car for rent"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        data = request.get_json()
-        from datetime import datetime
-        
-        start_date = datetime.strptime(data.get('start_date'), '%Y-%m-%d')
-        end_date = datetime.strptime(data.get('end_date'), '%Y-%m-%d')
-        days = (end_date - start_date).days + 1
-        
-        # Get car price
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT price_per_day FROM cars_for_rent WHERE id = ?", (data.get('car_id'),))
-        car = cur.fetchone()
-        if not car:
-            conn.close()
-            return jsonify({'success': False, 'error': 'Car not found'})
-        
-        total_amount = float(car['price_per_day']) * days
-        
-        cur.execute("""
-            INSERT INTO rental_bookings 
-            (car_id, customer_id, start_date, end_date, total_amount, status)
-            VALUES (?, ?, ?, ?, ?, 'pending')
-        """, (
-            int(data.get('car_id')),
-            session['user_id'],
-            data.get('start_date'),
-            data.get('end_date'),
-            total_amount
-        ))
-        conn.commit()
-        booking_id = cur.lastrowid
-        conn.close()
-        
-        return jsonify({'success': True, 'booking_id': booking_id, 'total_amount': total_amount})
-    except Exception as e:
-        print(f"Rental booking error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
-
-@app.route('/api/rental/my_bookings')
-def api_my_bookings():
-    """Get user's rental bookings"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT b.*, c.company, c.model, c.year, c.location_address, u.username as owner_name
-            FROM rental_bookings b
-            JOIN cars_for_rent c ON b.car_id = c.id
-            JOIN users u ON c.owner_id = u.id
-            WHERE b.customer_id = ?
-            ORDER BY b.created_at DESC
-        """, (session['user_id'],))
-        bookings = cur.fetchall()
-        conn.close()
-        
-        return jsonify({'success': True, 'bookings': [dict(b) for b in bookings]})
-    except Exception as e:
-        print(f"My bookings error: {e}")
         return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/chat', methods=['POST'])
@@ -964,242 +412,276 @@ def chat():
             'response': 'Sorry, I encountered an error. Please try again later.'
         })
 
-# -------------------- Car Booking System (Dealership) --------------------
-@app.route('/booking')
-def booking_home():
-    """Car booking service home page"""
+# -------------------- Rent/Buy Feature --------------------
+@app.route('/rent_buy')
+def rent_buy():
+    """Rent/Buy main page"""
     if 'user_id' not in session:
         return redirect(url_for('connect_login'))
-    return render_template('booking.html', companies=companies, fuel_types=fuel_types)
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT id, username, account_type, upi_id FROM users WHERE id = ?', (session['user_id'],))
+    user = cur.fetchone()
+    conn.close()
+    
+    if not user:
+        session.clear()
+        return redirect(url_for('connect_login'))
+    
+    # Generate a comprehensive year range (1950 to current year + 1)
+    current_year = datetime.now().year
+    year_range = list(range(1950, current_year + 2))  # +2 to include next year
+    year_range.reverse()  # Most recent years first
+    
+    return render_template('rent_buy.html', user=dict(user), companies=companies, years=year_range)
 
-@app.route('/api/booking/cars', methods=['GET'])
-def api_booking_cars():
-    """Get available cars for sale (booking)"""
-    try:
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT c.*, u.username as dealer_name, u.phone as dealer_phone, u.address as dealer_address
-            FROM cars_for_sale c
-            JOIN users u ON c.dealer_id = u.id
-            WHERE c.available = 1
-            ORDER BY c.created_at DESC
-        """)
-        cars = cur.fetchall()
-        conn.close()
-        
-        return jsonify({'success': True, 'cars': [dict(car) for car in cars]})
-    except Exception as e:
-        print(f"Booking cars error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+@app.route('/rent_buy/listings')
+def rent_buy_listings():
+    """Get all car listings"""
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT c.*, u.username AS dealer_name, u.upi_id AS dealer_upi
+        FROM cars c
+        JOIN users u ON u.id = c.dealer_id
+        ORDER BY c.created_at DESC
+    """)
+    listings = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(listings)
 
-@app.route('/api/booking/add_car', methods=['POST'])
-def api_add_booking_car():
-    """Add a car for sale (dealers only)"""
-    conn = None
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        # Check if user is a car dealer
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT account_type FROM users WHERE id = ?', (session['user_id'],))
-        user = cur.fetchone()
-        
-        if not user or user['account_type'] != 'Car Dealer':
-            conn.close()
-            return jsonify({'success': False, 'error': 'Only car dealers can add cars for sale'}), 403
-        
-        data = request.get_json()
-        
-        # Use the same connection for the insert
-        cur.execute("""
-            INSERT INTO cars_for_sale 
-            (dealer_id, company, model, year, fuel_type, price, kms_driven,
-             location_latitude, location_longitude, location_address, description, image_url)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            session['user_id'],
-            data.get('company'),
-            data.get('model'),
-            int(data.get('year')),
-            data.get('fuel_type'),
-            float(data.get('price')),
-            int(data.get('kms_driven', 0)),
-            float(data.get('latitude', 0)) if data.get('latitude') else None,
-            float(data.get('longitude', 0)) if data.get('longitude') else None,
-            data.get('address', ''),
-            data.get('description', ''),
-            data.get('image_url', f"https://via.placeholder.com/400x300/667eea/ffffff?text={data.get('company')}+{data.get('model')}")
-        ))
-        conn.commit()
-        car_id = cur.lastrowid
-        conn.close()
-        
-        return jsonify({'success': True, 'car_id': car_id})
-    except Exception as e:
-        if conn:
-            conn.close()
-        print(f"Add booking car error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)})
+@app.route('/rent_buy/my_listings')
+def rent_buy_my_listings():
+    """Get dealer's own listings"""
+    if 'user_id' not in session:
+        return jsonify([])
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT c.*, u.username AS dealer_name, u.upi_id AS dealer_upi
+        FROM cars c
+        JOIN users u ON u.id = c.dealer_id
+        WHERE c.dealer_id = ?
+        ORDER BY c.created_at DESC
+    """, (session['user_id'],))
+    listings = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(listings)
 
-@app.route('/api/booking/book_car', methods=['POST'])
-def api_book_car():
-    """Book a car for viewing/purchase"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        data = request.get_json()
-        from datetime import datetime
-        
-        # Validate required fields
-        if not all([data.get('car_id'), data.get('booking_date'), data.get('booking_time'), data.get('contact_phone')]):
-            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
-        
-        # Check if car exists and is available
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("SELECT available FROM cars_for_sale WHERE id = ?", (int(data.get('car_id')),))
-        car = cur.fetchone()
-        
-        if not car:
-            conn.close()
-            return jsonify({'success': False, 'error': 'Car not found'})
-        
-        if not car['available']:
-            conn.close()
-            return jsonify({'success': False, 'error': 'Car is not available'})
-        
-        # Create booking
-        cur.execute("""
-            INSERT INTO car_bookings 
-            (car_id, customer_id, booking_date, booking_time, contact_phone, contact_email, message, status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
-        """, (
-            int(data.get('car_id')),
-            session['user_id'],
-            data.get('booking_date'),
-            data.get('booking_time'),
-            data.get('contact_phone'),
-            data.get('contact_email', ''),
-            data.get('message', '')
-        ))
-        conn.commit()
-        booking_id = cur.lastrowid
+@app.route('/rent_buy/create_listing', methods=['POST'])
+def rent_buy_create_listing():
+    """Create a car listing (Car Dealer only)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT account_type FROM users WHERE id = ?', (session['user_id'],))
+    user = cur.fetchone()
+    
+    if not user or user['account_type'] != 'Car Dealer':
         conn.close()
-        
-        return jsonify({'success': True, 'booking_id': booking_id, 'message': 'Booking request submitted successfully'})
-    except Exception as e:
-        print(f"Car booking error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': 'Only Car Dealers can create listings'}), 403
+    
+    data = request.get_json()
+    car_name = data.get('car_name', '').strip()
+    brand = data.get('brand', '').strip()
+    year = int(data.get('year', 0))
+    listing_type = data.get('listing_type', '').strip()
+    price = float(data.get('price', 0))
+    photo_url = data.get('photo_url', '').strip()
+    description = data.get('description', '').strip()
+    
+    if not all([car_name, brand, year, listing_type, price]):
+        conn.close()
+        return jsonify({'success': False, 'error': 'All required fields must be filled'}), 400
+    
+    if listing_type not in ['Sell', 'Rent']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Invalid listing type'}), 400
+    
+    cur.execute("""
+        INSERT INTO cars (dealer_id, car_name, brand, year, listing_type, price, photo_url, description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    """, (session['user_id'], car_name, brand, year, listing_type, price, photo_url, description))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
 
-@app.route('/api/booking/my_bookings')
-def api_my_car_bookings():
-    """Get user's car bookings"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT b.*, c.company, c.model, c.year, c.price, c.location_address, 
-                   u.username as dealer_name, u.phone as dealer_phone
-            FROM car_bookings b
-            JOIN cars_for_sale c ON b.car_id = c.id
-            JOIN users u ON c.dealer_id = u.id
-            WHERE b.customer_id = ?
-            ORDER BY b.created_at DESC
-        """, (session['user_id'],))
-        bookings = cur.fetchall()
-        conn.close()
-        
-        return jsonify({'success': True, 'bookings': [dict(b) for b in bookings]})
-    except Exception as e:
-        print(f"My car bookings error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+@app.route('/rent_buy/requests')
+def rent_buy_requests():
+    """Get requests for a dealer"""
+    if 'user_id' not in session:
+        return jsonify([])
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT cr.*, 
+               c.car_name, c.brand, c.year, c.listing_type, c.price,
+               cu.username AS customer_name, cu.upi_id AS customer_upi
+        FROM car_requests cr
+        JOIN cars c ON c.id = cr.car_id
+        JOIN users cu ON cu.id = cr.customer_id
+        WHERE cr.dealer_id = ?
+        ORDER BY cr.created_at DESC
+    """, (session['user_id'],))
+    requests = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(requests)
 
-@app.route('/api/booking/dealer_bookings')
-def api_dealer_bookings():
-    """Get bookings for dealer's cars"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        # Check if user is a car dealer
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute('SELECT account_type FROM users WHERE id = ?', (session['user_id'],))
-        user = cur.fetchone()
-        
-        if not user or user['account_type'] != 'Car Dealer':
-            conn.close()
-            return jsonify({'success': False, 'error': 'Only car dealers can view dealer bookings'}), 403
-        
-        cur.execute("""
-            SELECT b.*, c.company, c.model, c.year, c.price,
-                   cu.username as customer_name, cu.phone as customer_phone
-            FROM car_bookings b
-            JOIN cars_for_sale c ON b.car_id = c.id
-            JOIN users cu ON b.customer_id = cu.id
-            WHERE c.dealer_id = ?
-            ORDER BY b.created_at DESC
-        """, (session['user_id'],))
-        bookings = cur.fetchall()
+@app.route('/rent_buy/request', methods=['POST'])
+def rent_buy_create_request():
+    """Create a buy/rent request (Customer only)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT account_type FROM users WHERE id = ?', (session['user_id'],))
+    user = cur.fetchone()
+    
+    if not user or user['account_type'] != 'Customer':
         conn.close()
-        
-        return jsonify({'success': True, 'bookings': [dict(b) for b in bookings]})
-    except Exception as e:
-        print(f"Dealer bookings error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': 'Only Customers can make requests'}), 403
+    
+    data = request.get_json()
+    car_id = int(data.get('car_id', 0))
+    request_type = data.get('request_type', '').strip()
+    
+    if not car_id or request_type not in ['Buy', 'Rent']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Invalid request'}), 400
+    
+    # Get car and dealer info
+    cur.execute('SELECT dealer_id, listing_type FROM cars WHERE id = ?', (car_id,))
+    car = cur.fetchone()
+    if not car:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Car not found'}), 404
+    
+    # Check if request already exists
+    cur.execute("""
+        SELECT id FROM car_requests 
+        WHERE car_id = ? AND customer_id = ? AND status = 'Pending'
+    """, (car_id, session['user_id']))
+    existing = cur.fetchone()
+    if existing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'You already have a pending request for this car'}), 400
+    
+    cur.execute("""
+        INSERT INTO car_requests (car_id, customer_id, dealer_id, request_type)
+        VALUES (?, ?, ?, ?)
+    """, (car_id, session['user_id'], car['dealer_id'], request_type))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
 
-@app.route('/api/booking/update_status', methods=['POST'])
-def api_update_booking_status():
-    """Update booking status (for dealers)"""
-    try:
-        if 'user_id' not in session:
-            return jsonify({'success': False, 'error': 'Not logged in'}), 401
-        
-        data = request.get_json()
-        booking_id = data.get('booking_id')
-        new_status = data.get('status')
-        
-        if new_status not in ['pending', 'confirmed', 'completed', 'cancelled']:
-            return jsonify({'success': False, 'error': 'Invalid status'}), 400
-        
-        # Check if user is the dealer for this car
-        conn = get_db_connection()
-        cur = conn.cursor()
-        cur.execute("""
-            SELECT c.dealer_id 
-            FROM car_bookings b
-            JOIN cars_for_sale c ON b.car_id = c.id
-            WHERE b.id = ?
-        """, (booking_id,))
-        result = cur.fetchone()
-        
-        if not result or result['dealer_id'] != session['user_id']:
-            conn.close()
-            return jsonify({'success': False, 'error': 'Unauthorized'}), 403
-        
-        cur.execute("""
-            UPDATE car_bookings 
-            SET status = ?
-            WHERE id = ?
-        """, (new_status, booking_id))
-        conn.commit()
+@app.route('/rent_buy/accept_request', methods=['POST'])
+def rent_buy_accept_request():
+    """Accept a request (Car Dealer only)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT account_type FROM users WHERE id = ?', (session['user_id'],))
+    user = cur.fetchone()
+    
+    if not user or user['account_type'] != 'Car Dealer':
         conn.close()
-        
-        return jsonify({'success': True, 'message': 'Booking status updated'})
-    except Exception as e:
-        print(f"Update booking status error: {e}")
-        return jsonify({'success': False, 'error': str(e)})
+        return jsonify({'success': False, 'error': 'Only Car Dealers can accept requests'}), 403
+    
+    data = request.get_json()
+    request_id = int(data.get('request_id', 0))
+    action = data.get('action', '').strip()  # 'accept' or 'reject'
+    
+    if not request_id or action not in ['accept', 'reject']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Invalid request'}), 400
+    
+    # Verify the request belongs to this dealer
+    cur.execute('SELECT dealer_id FROM car_requests WHERE id = ?', (request_id,))
+    req = cur.fetchone()
+    if not req or req['dealer_id'] != session['user_id']:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Request not found or unauthorized'}), 404
+    
+    status = 'Accepted' if action == 'accept' else 'Rejected'
+    cur.execute('UPDATE car_requests SET status = ? WHERE id = ?', (status, request_id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+
+@app.route('/rent_buy/delete_listing', methods=['POST'])
+def rent_buy_delete_listing():
+    """Delete a car listing (Car Dealer only, own listings only)"""
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'Unauthorized'}), 401
+    
+    user_id = session['user_id']
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT account_type FROM users WHERE id = ?', (user_id,))
+    user = cur.fetchone()
+    
+    if not user or user['account_type'] != 'Car Dealer':
+        conn.close()
+        return jsonify({'success': False, 'error': 'Only Car Dealers can delete listings'}), 403
+    
+    data = request.get_json(silent=True) or {}
+    try:
+        listing_id = int(data.get('listing_id', 0))
+    except (TypeError, ValueError):
+        listing_id = 0
+    
+    if listing_id <= 0:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Invalid listing ID'}), 400
+    
+    # Verify the listing belongs to this dealer
+    cur.execute('SELECT id FROM cars WHERE id = ? AND dealer_id = ?', (listing_id, user_id))
+    listing = cur.fetchone()
+    if not listing:
+        conn.close()
+        return jsonify({'success': False, 'error': 'Listing not found or unauthorized'}), 404
+    
+    # Delete associated requests first (cascade delete)
+    cur.execute('DELETE FROM car_requests WHERE car_id = ?', (listing_id,))
+    # Delete the listing
+    cur.execute('DELETE FROM cars WHERE id = ? AND dealer_id = ?', (listing_id, user_id))
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True})
+
+@app.route('/rent_buy/accepted_requests')
+def rent_buy_accepted_requests():
+    """Get accepted requests history for a dealer"""
+    if 'user_id' not in session:
+        return jsonify([])
+    
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT cr.*, 
+               c.car_name, c.brand, c.year, c.listing_type, c.price,
+               cu.username AS customer_name, cu.upi_id AS customer_upi
+        FROM car_requests cr
+        JOIN cars c ON c.id = cr.car_id
+        JOIN users cu ON cu.id = cr.customer_id
+        WHERE cr.dealer_id = ? AND cr.status = 'Accepted'
+        ORDER BY cr.created_at DESC
+    """, (session['user_id'],))
+    requests = [dict(row) for row in cur.fetchall()]
+    conn.close()
+    return jsonify(requests)
 
 if __name__ == '__main__':
     import os

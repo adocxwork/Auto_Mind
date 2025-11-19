@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent/Buy - Auto_Mind</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+<body>
+    <nav>
+        <div class="nav-container">
+            <a href="/" class="logo">Auto_Mind</a>
+            <ul class="nav-links" id="navLinks">
+                <li><a href="/">Home</a></li>
+                <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/connect">Connect</a></li>
+                <li><a href="/rent_buy" class="active">Rent/Buy</a></li>
+                <li><a href="/chatbot">ChatBot</a></li>
+                <li><a href="/services">Services</a></li>
+                <li><a href="/contact">Contact</a></li>
+                <li><a href="/about">About</a></li>
+            </ul>
+            <button class="mobile-toggle" id="mobileToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+    </nav>
+
+    <div class="predict-container">
+        <div class="predict-header">
+            <h1><i class="fas fa-car-side"></i> Rent/Buy Cars</h1>
+            <p>{% if user.account_type == 'Car Dealer' %}List your cars for sale or rent{% else %}Browse and request to buy or rent cars{% endif %}</p>
+            <div style="margin-top: 1rem; padding: 1rem; background: var(--card); border-radius: 10px; display: inline-block;">
+                <strong>Your UPI ID:</strong> <span style="color: var(--accent);">{{ user.upi_id }}</span>
+            </div>
+        </div>
+
+        {% if user.account_type == 'Car Dealer' %}
+        <!-- Car Dealer View -->
+        <div class="rent-buy-tabs">
+            <button class="tab-btn active" data-tab="listings">My Listings</button>
+            <button class="tab-btn" data-tab="create">Create Listing</button>
+            <button class="tab-btn" data-tab="requests">Pending Requests</button>
+            <button class="tab-btn" data-tab="history">Accepted History</button>
+        </div>
+
+        <!-- Create Listing Form -->
+        <div class="tab-content" id="create-tab" style="display: none;">
+            <form class="prediction-form" id="createListingForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="car_name"><i class="fas fa-car"></i> Car Name</label>
+                        <input type="text" class="form-control" id="car_name" name="car_name" required placeholder="e.g., Swift Dzire">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="brand"><i class="fas fa-industry"></i> Brand</label>
+                        <select class="form-control" id="brand" name="brand" required>
+                            <option value="">Select Brand</option>
+                            {% for company in companies %}
+                            <option value="{{ company }}">{{ company }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="year"><i class="fas fa-calendar"></i> Year</label>
+                        <input type="number" class="form-control" id="year" name="year" required placeholder="Enter year (e.g., 2024)" min="1900" max="2100" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="listing_type"><i class="fas fa-tag"></i> Listing Type</label>
+                        <select class="form-control" id="listing_type" name="listing_type" required>
+                            <option value="">Select Type</option>
+                            <option value="Sell">Sell</option>
+                            <option value="Rent">Rent</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label" for="price"><i class="fas fa-rupee-sign"></i> Price</label>
+                        <input type="number" class="form-control" id="price" name="price" required placeholder="Enter price" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="photo_url"><i class="fas fa-image"></i> Photo URL</label>
+                        <input type="url" class="form-control" id="photo_url" name="photo_url" placeholder="https://example.com/image.jpg">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="description"><i class="fas fa-align-left"></i> Description</label>
+                    <textarea class="form-control" id="description" name="description" rows="4" placeholder="Additional details about the car..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary"><i class="fas fa-plus"></i> Create Listing</button>
+            </form>
+        </div>
+
+        <!-- My Listings -->
+        <div class="tab-content" id="listings-tab">
+            <div id="myListingsContainer" class="listings-grid"></div>
+        </div>
+
+        <!-- Requests -->
+        <div class="tab-content" id="requests-tab" style="display: none;">
+            <div id="requestsContainer"></div>
+        </div>
+
+        <!-- Accepted History -->
+        <div class="tab-content" id="history-tab" style="display: none;">
+            <div id="historyContainer"></div>
+        </div>
+
+        {% else %}
+        <!-- Customer View -->
+        <div id="listingsContainer" class="listings-grid"></div>
+        {% endif %}
+    </div>
+
+    <footer>
+        <div class="footer-content">
+            <div class="footer-social">
+                <a href="#"><i class="fab fa-facebook-f"></i></a>
+                <a href="#"><i class="fab fa-twitter"></i></a>
+                <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                <a href="#"><i class="fab fa-github"></i></a>
+            </div>
+            <p>&copy; <span id="year"></span> Auto_Mind. The Intelligence Behind Car Price Prediction.</p>
+        </div>
+    </footer>
+
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+        
+        const mobileToggle = document.getElementById('mobileToggle');
+        const navLinks = document.getElementById('navLinks');
+        mobileToggle.addEventListener('click', () => {
+            navLinks.classList.toggle('active');
+            const icon = mobileToggle.querySelector('i');
+            icon.classList.toggle('fa-bars');
+            icon.classList.toggle('fa-times');
+        });
+
+        const userType = '{{ user.account_type }}';
+        const userId = {{ user.id }};
+
+        // Tab switching for dealers
+        if (userType === 'Car Dealer') {
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                    document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+                    btn.classList.add('active');
+                    const tab = btn.getAttribute('data-tab');
+                    const tabElement = document.getElementById(tab + '-tab');
+                    if (tabElement) {
+                        tabElement.style.display = 'block';
+                        if (tab === 'listings') loadMyListings();
+                        if (tab === 'requests') loadRequests();
+                        if (tab === 'history') loadAcceptedHistory();
+                    }
+                });
+            });
+            // Load initial listings
+            loadMyListings();
+        }
+
+        function renderListing(listing, showDelete = false) {
+            const photo = listing.photo_url || 'https://via.placeholder.com/300x200?text=Car+Image';
+            return `
+                <div class="listing-card">
+                    ${listing.photo_url ? `<img src="${listing.photo_url}" alt="${listing.car_name}" onerror="this.src='https://via.placeholder.com/300x200?text=Car+Image'">` : '<div class="listing-placeholder"><i class="fas fa-car"></i></div>'}
+                    <div class="listing-content">
+                        <h3>${listing.car_name}</h3>
+                        <p><i class="fas fa-industry"></i> ${listing.brand} | <i class="fas fa-calendar"></i> ${listing.year}</p>
+                        <p><strong>Type:</strong> ${listing.listing_type}</p>
+                        <p class="listing-price"><i class="fas fa-rupee-sign"></i> ${parseFloat(listing.price).toLocaleString('en-IN')}</p>
+                        ${listing.description ? `<p class="listing-desc">${listing.description}</p>` : ''}
+                        <p class="listing-dealer"><i class="fas fa-user"></i> Dealer: ${listing.dealer_name}</p>
+                        <p class="listing-upi"><i class="fas fa-wallet"></i> UPI: <strong>${listing.dealer_upi}</strong></p>
+                        ${userType === 'Customer' ? `
+                            <div class="listing-actions">
+                                <button class="btn btn-primary" onclick="requestCar(${listing.id}, 'Buy')" ${listing.listing_type === 'Rent' ? 'disabled' : ''}>
+                                    <i class="fas fa-shopping-cart"></i> Request to Buy
+                                </button>
+                                <button class="btn btn-secondary" onclick="requestCar(${listing.id}, 'Rent')" ${listing.listing_type === 'Sell' ? 'disabled' : ''}>
+                                    <i class="fas fa-key"></i> Request to Rent
+                                </button>
+                            </div>
+                        ` : ''}
+                        ${(showDelete && userType === 'Car Dealer') ? `
+                            <div class="listing-actions" style="margin-top: 1rem;">
+                                <button class="btn" style="background: var(--error); color: white;" onclick="deleteListing(${listing.id})">
+                                    <i class="fas fa-trash"></i> Delete Listing
+                                </button>
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderRequest(req) {
+            const statusClass = req.status === 'Accepted' ? 'success' : req.status === 'Rejected' ? 'error' : '';
+            return `
+                <div class="request-card">
+                    <h3>${req.car_name} (${req.brand} ${req.year})</h3>
+                    <p><strong>Request Type:</strong> ${req.request_type}</p>
+                    <p><strong>Customer:</strong> ${req.customer_name}</p>
+                    <p><strong>Customer UPI:</strong> <span style="color: var(--accent);">${req.customer_upi}</span></p>
+                    <p><strong>Price:</strong> ₹${parseFloat(req.price).toLocaleString('en-IN')}</p>
+                    <p><strong>Status:</strong> <span class="status-badge ${statusClass}">${req.status}</span></p>
+                    ${req.status === 'Pending' ? `
+                        <div class="request-actions">
+                            <button class="btn btn-primary" onclick="handleRequest(${req.id}, 'accept')">
+                                <i class="fas fa-check"></i> Accept
+                            </button>
+                            <button class="btn btn-secondary" onclick="handleRequest(${req.id}, 'reject')">
+                                <i class="fas fa-times"></i> Reject
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        async function loadListings() {
+            const res = await fetch('/rent_buy/listings');
+            const listings = await res.json();
+            const container = document.getElementById('listingsContainer');
+            if (listings.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No listings available.</p>';
+            } else {
+                container.innerHTML = listings.map(renderListing).join('');
+            }
+        }
+
+        async function loadMyListings() {
+            const res = await fetch('/rent_buy/my_listings');
+            const listings = await res.json();
+            const container = document.getElementById('myListingsContainer');
+            if (listings.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">You haven\'t created any listings yet.</p>';
+            } else {
+                container.innerHTML = listings.map(listing => renderListing(listing, true)).join('');
+            }
+        }
+
+        async function loadRequests() {
+            const res = await fetch('/rent_buy/requests');
+            const requests = await res.json();
+            const container = document.getElementById('requestsContainer');
+            if (requests.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No requests yet.</p>';
+            } else {
+                container.innerHTML = requests.map(renderRequest).join('');
+            }
+        }
+
+        async function requestCar(carId, requestType) {
+            if (!confirm(`Are you sure you want to request to ${requestType.toLowerCase()} this car?`)) return;
+            
+            try {
+                const res = await fetch('/rent_buy/request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ car_id: carId, request_type: requestType })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Request submitted successfully!');
+                    loadListings();
+                } else {
+                    alert(data.error || 'Failed to submit request');
+                }
+            } catch (error) {
+                alert('Error submitting request');
+            }
+        }
+
+        async function handleRequest(requestId, action) {
+            const actionText = action === 'accept' ? 'accept' : 'reject';
+            if (!confirm(`Are you sure you want to ${actionText} this request?`)) return;
+            
+            try {
+                const res = await fetch('/rent_buy/accept_request', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ request_id: requestId, action: action })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert(`Request ${actionText}ed successfully!`);
+                    loadRequests();
+                    loadAcceptedHistory();
+                } else {
+                    alert(data.error || 'Failed to process request');
+                }
+            } catch (error) {
+                alert('Error processing request');
+            }
+        }
+
+        async function deleteListing(listingId) {
+            if (userType !== 'Car Dealer') {
+                alert('Only car dealers can delete listings.');
+                return;
+            }
+            if (!confirm('Are you sure you want to delete this listing? This will also delete all associated requests. This action cannot be undone.')) return;
+            
+            try {
+                const res = await fetch('/rent_buy/delete_listing', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ listing_id: listingId })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    alert('Listing deleted successfully!');
+                    loadMyListings();
+                } else {
+                    alert(data.error || 'Failed to delete listing');
+                }
+            } catch (error) {
+                alert('Error deleting listing');
+            }
+        }
+
+        async function loadAcceptedHistory() {
+            const res = await fetch('/rent_buy/accepted_requests');
+            const requests = await res.json();
+            const container = document.getElementById('historyContainer');
+            if (requests.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: var(--text-muted);">No accepted requests yet.</p>';
+            } else {
+                container.innerHTML = requests.map(req => renderRequest(req)).join('');
+            }
+        }
+
+        // Create listing form submission
+        if (userType === 'Car Dealer') {
+            document.getElementById('createListingForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const formData = new FormData(e.target);
+                const data = {
+                    car_name: formData.get('car_name'),
+                    brand: formData.get('brand'),
+                    year: parseInt(formData.get('year')),
+                    listing_type: formData.get('listing_type'),
+                    price: parseFloat(formData.get('price')),
+                    photo_url: formData.get('photo_url'),
+                    description: formData.get('description')
+                };
+
+                try {
+                    const res = await fetch('/rent_buy/create_listing', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        alert('Listing created successfully!');
+                        e.target.reset();
+                        loadMyListings();
+                        document.querySelector('[data-tab="listings"]').click();
+                    } else {
+                        alert(result.error || 'Failed to create listing');
+                    }
+                } catch (error) {
+                    alert('Error creating listing');
+                }
+            });
+        }
+
+        // Load initial data
+        if (userType === 'Customer') {
+            loadListings();
+        }
+    </script>
+</body>
+</html>
+

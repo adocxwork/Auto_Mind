@@ -545,6 +545,213 @@ footer {
     font-size: 1.5rem;
 }
 
+/* EMI Section */
+.emi-section {
+    margin-top: 3rem;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.emi-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+}
+
+.emi-header h2 {
+    font-size: 2rem;
+    margin-bottom: 0.25rem;
+    background: var(--gradient);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.emi-header p {
+    color: var(--text-muted);
+}
+
+.emi-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    color: var(--accent);
+    background: rgba(0, 212, 255, 0.08);
+    font-weight: 600;
+}
+
+.emi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.emi-card {
+    background: var(--card);
+    border-radius: 16px;
+    padding: 2rem;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.input-with-prefix {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding-left: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.input-with-prefix:focus-within {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+}
+
+.input-with-prefix span {
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.input-with-prefix .form-control {
+    border: none;
+    background: transparent;
+    padding-left: 0;
+}
+
+.input-with-prefix .form-control:focus {
+    border: none;
+    box-shadow: none;
+    transform: none;
+}
+
+.emi-hint {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+    margin-top: -0.5rem;
+}
+
+.emi-summary {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.08), rgba(118, 75, 162, 0.2));
+    border-radius: 16px;
+    padding: 2rem;
+    border: 1px solid rgba(0, 212, 255, 0.25);
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.summary-chip {
+    display: inline-flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.chip-label {
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
+.summary-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+
+.summary-card {
+    background: rgba(0, 0, 0, 0.25);
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.summary-label {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+.summary-amount {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-top: 0.35rem;
+}
+
+.progress-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.progress-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+.progress-bar {
+    position: relative;
+    width: 100%;
+    height: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+    display: flex;
+}
+
+.progress-bar span {
+    display: block;
+    height: 100%;
+}
+
+.principal-bar {
+    background: var(--accent);
+}
+
+.interest-bar {
+    background: rgba(239, 68, 68, 0.8);
+}
+
+.emi-tips {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.emi-tips li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.emi-tips i {
+    color: var(--success);
+}
+
 /* Loading Animation */
 .loading {
     display: none;
@@ -1028,250 +1235,6 @@ footer {
     }
 }
 
-/* Authentication Section */
-.auth-section {
-    padding: 4rem 2rem;
-    max-width: 1200px;
-    margin: 0 auto;
-}
-
-.auth-container {
-    background: var(--card);
-    padding: 3rem;
-    border-radius: 20px;
-    border: 1px solid rgba(0, 212, 255, 0.2);
-}
-
-.auth-header {
-    text-align: center;
-    margin-bottom: 3rem;
-}
-
-.auth-header h2 {
-    font-size: 2.5rem;
-    background: var(--gradient);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 1rem;
-}
-
-.auth-header p {
-    color: var(--text-muted);
-    font-size: 1.2rem;
-}
-
-.auth-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    gap: 2rem;
-    margin-bottom: 2rem;
-}
-
-.auth-card {
-    background: rgba(255, 255, 255, 0.05);
-    padding: 2.5rem;
-    border-radius: 15px;
-    text-align: center;
-    border: 2px solid rgba(0, 212, 255, 0.2);
-    transition: all 0.3s ease;
-}
-
-.auth-card:hover {
-    transform: translateY(-10px);
-    border-color: var(--accent);
-    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
-}
-
-.auth-icon {
-    font-size: 4rem;
-    color: var(--accent);
-    margin-bottom: 1rem;
-}
-
-.auth-card h3 {
-    font-size: 1.8rem;
-    margin-bottom: 1.5rem;
-    color: var(--text);
-}
-
-.feature-list {
-    list-style: none;
-    text-align: left;
-    margin: 1.5rem 0;
-    padding: 0;
-}
-
-.feature-list li {
-    padding: 0.75rem 0;
-    color: var(--text-muted);
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-}
-
-.feature-list i {
-    color: var(--success);
-    font-size: 1.2rem;
-}
-
-.auth-login {
-    text-align: center;
-    margin-top: 2rem;
-    padding-top: 2rem;
-    border-top: 1px solid rgba(0, 212, 255, 0.2);
-}
-
-.auth-login a {
-    color: var(--accent);
-    text-decoration: none;
-    font-weight: 600;
-}
-
-.auth-login a:hover {
-    text-decoration: underline;
-}
-
-/* Recommendations Page */
-.recommendations-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 2rem;
-}
-
-.price-filter {
-    background: var(--card);
-    padding: 2rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    border: 1px solid rgba(0, 212, 255, 0.2);
-}
-
-.price-range-inputs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.car-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 2rem;
-}
-
-.car-card {
-    position: relative;
-    background: var(--card);
-    border-radius: 15px;
-    overflow: hidden;
-    border: 1px solid rgba(0, 212, 255, 0.2);
-    transition: all 0.3s ease;
-}
-
-.car-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.3);
-}
-
-.car-image {
-    width: 100%;
-    height: 200px;
-    object-fit: cover;
-    background: var(--secondary);
-}
-
-.car-info {
-    padding: 1.5rem;
-}
-
-.car-info h3 {
-    color: var(--accent);
-    margin-bottom: 0.5rem;
-}
-
-.car-price {
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--success);
-    margin: 0.5rem 0;
-}
-
-.car-details {
-    color: var(--text-muted);
-    font-size: 0.9rem;
-    margin: 0.25rem 0;
-}
-
-/* Mechanic Finder */
-.mechanic-container {
-    max-width: 1000px;
-    margin: 2rem auto;
-    padding: 2rem;
-}
-
-.location-section {
-    background: var(--card);
-    padding: 2rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    border: 1px solid rgba(0, 212, 255, 0.2);
-}
-
-.mechanic-list {
-    display: grid;
-    gap: 1.5rem;
-}
-
-.mechanic-card {
-    background: var(--card);
-    padding: 1.5rem;
-    border-radius: 15px;
-    border: 1px solid rgba(0, 212, 255, 0.2);
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: all 0.3s ease;
-}
-
-.mechanic-card:hover {
-    border-color: var(--accent);
-    transform: translateX(5px);
-}
-
-.mechanic-info h3 {
-    color: var(--accent);
-    margin-bottom: 0.5rem;
-}
-
-.mechanic-distance {
-    color: var(--success);
-    font-weight: bold;
-    font-size: 1.2rem;
-}
-
-/* Rental Page */
-.rental-container {
-    max-width: 1200px;
-    margin: 2rem auto;
-    padding: 2rem;
-}
-
-.rental-actions {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 2rem;
-    flex-wrap: wrap;
-}
-
-.booking-form {
-    background: var(--card);
-    padding: 2rem;
-    border-radius: 15px;
-    margin-bottom: 2rem;
-    border: 1px solid rgba(0, 212, 255, 0.2);
-}
-
 /* Responsive Design */
 @media (max-width: 768px) {
     .nav-links {
@@ -1369,16 +1332,212 @@ footer {
         justify-content: center;
     }
 
-    .auth-cards {
+    .emi-section {
+        padding: 1.5rem;
+    }
+
+    .emi-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Rent/Buy Page Specific Styles */
+.rent-buy-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    border-bottom: 2px solid rgba(0, 212, 255, 0.2);
+}
+
+.tab-btn {
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s ease;
+    margin-bottom: -2px;
+}
+
+.tab-btn:hover {
+    color: var(--accent);
+}
+
+.tab-btn.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+}
+
+.tab-content {
+    animation: fadeInUp 0.5s ease-out;
+}
+
+.listings-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+    margin-top: 2rem;
+}
+
+.listing-card {
+    background: var(--card);
+    border-radius: 15px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    transition: all 0.3s ease;
+}
+
+.listing-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px rgba(0, 212, 255, 0.2);
+    border-color: var(--accent);
+}
+
+.listing-card img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.listing-placeholder {
+    width: 100%;
+    height: 200px;
+    background: rgba(0, 212, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 3rem;
+}
+
+.listing-content {
+    padding: 1.5rem;
+}
+
+.listing-content h3 {
+    color: var(--text);
+    margin-bottom: 0.5rem;
+    font-size: 1.3rem;
+}
+
+.listing-content p {
+    color: var(--text-muted);
+    margin: 0.5rem 0;
+    font-size: 0.9rem;
+}
+
+.listing-price {
+    font-size: 1.5rem !important;
+    font-weight: bold;
+    color: var(--success) !important;
+    margin: 1rem 0 !important;
+}
+
+.listing-desc {
+    font-style: italic;
+    margin-top: 0.5rem;
+}
+
+.listing-dealer,
+.listing-upi {
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.listing-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.listing-actions .btn {
+    flex: 1;
+    padding: 0.75rem;
+    font-size: 0.9rem;
+}
+
+.request-card {
+    background: var(--card);
+    padding: 1.5rem;
+    border-radius: 15px;
+    margin-bottom: 1.5rem;
+    border: 1px solid rgba(0, 212, 255, 0.2);
+}
+
+.request-card h3 {
+    color: var(--text);
+    margin-bottom: 1rem;
+}
+
+.request-card p {
+    color: var(--text-muted);
+    margin: 0.5rem 0;
+}
+
+.status-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.status-badge.success {
+    background: rgba(16, 185, 129, 0.2);
+    color: var(--success);
+}
+
+.status-badge.error {
+    background: rgba(239, 68, 68, 0.2);
+    color: var(--error);
+}
+
+.status-badge:not(.success):not(.error) {
+    background: rgba(0, 212, 255, 0.2);
+    color: var(--accent);
+}
+
+.request-actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.request-actions .btn {
+    flex: 1;
+}
+
+.listing-actions .btn[style*="background: var(--error)"] {
+    background: var(--error) !important;
+    color: white !important;
+    border: none;
+}
+
+.listing-actions .btn[style*="background: var(--error)"]:hover {
+    background: #dc2626 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+}
+
+@media (max-width: 768px) {
+    .listings-grid {
         grid-template-columns: 1fr;
     }
 
-    .car-grid {
-        grid-template-columns: 1fr;
+    .rent-buy-tabs {
+        flex-wrap: wrap;
     }
 
-    .mechanic-card {
+    .tab-btn {
+        flex: 1;
+        min-width: 120px;
+    }
+
+    .listing-actions {
         flex-direction: column;
-        align-items: flex-start;
     }
 }

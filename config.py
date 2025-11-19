@@ -3,7 +3,7 @@
 
 # AI API Key for Chatbot functionality
 # Get your API key from: https://makersuite.google.com/app/apikey
-AK = "AIzaSyA_z6PjCczDfQrhZ9-RaTSA_5buuuA7rho"
+AK = "AIzaSyDi_pLm4wkcwg9XTPB6Di9PPITZc36E95E"
 
 # Flask Configuration
 FLASK_ENV = "development"

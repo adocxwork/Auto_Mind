@@ -14,11 +14,12 @@
             <ul class="nav-links" id="navLinks">
                 <li><a href="/">Home</a></li>
                 <li><a href="/predict_page">Predict</a></li>
+                <li><a href="/connect" class="active">Connect</a></li>
+                <li><a href="/rent_buy">Rent/Buy</a></li>
                 <li><a href="/chatbot">ChatBot</a></li>
                 <li><a href="/services">Services</a></li>
                 <li><a href="/contact">Contact</a></li>
                 <li><a href="/about">About</a></li>
-                <li><a href="/connect" class="active">Connect</a></li>
             </ul>
             <button class="mobile-toggle" id="mobileToggle">
                 <i class="fas fa-bars"></i>
@@ -26,7 +27,7 @@
         </div>
     </nav>
 
-    <div class="predict-container" style="max-width:700px;">
+    <div class="predict-container" style="max-width:600px;">
         <div class="predict-header">
             <h1><i class="fas fa-user-plus"></i> Create Account</h1>
             <p>Join the community and start connecting</p>
@@ -46,37 +47,16 @@
                     <label class="form-label" for="account_type"><i class="fas fa-id-card"></i> Account Type</label>
                     <select class="form-control" id="account_type" name="account_type" required>
                         <option value="">Select Type</option>
-                        <option value="Customer" {% if account_type=='Customer' or request.args.get('type')=='Customer' %}selected{% endif %}>Customer</option>
-                        <option value="Mechanic" {% if account_type=='Mechanic' or request.args.get('type')=='Mechanic' %}selected{% endif %}>Mechanic</option>
+                        <option value="Customer" {% if account_type=='Customer' %}selected{% endif %}>Customer</option>
+                        <option value="Mechanic" {% if account_type=='Mechanic' %}selected{% endif %}>Mechanic</option>
                         <option value="Car Dealer" {% if account_type=='Car Dealer' %}selected{% endif %}>Car Dealer</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label class="form-label" for="phone"><i class="fas fa-phone"></i> Phone</label>
-                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="+91 1234567890">
+                    <label class="form-label" for="upi_id"><i class="fas fa-indian-rupee-sign"></i> UPI ID</label>
+                    <input class="form-control" id="upi_id" name="upi_id" required value="{{ upi_id or '' }}" placeholder="name@bank">
                 </div>
             </div>
-            <div class="form-group">
-                <label class="form-label" for="upi_id"><i class="fas fa-indian-rupee-sign"></i> UPI ID</label>
-                <input class="form-control" id="upi_id" name="upi_id" required value="{{ upi_id or '' }}" placeholder="name@bank">
-            </div>
-            <div class="form-group">
-                <label class="form-label" for="address"><i class="fas fa-map-marker-alt"></i> Address</label>
-                <input class="form-control" id="address" name="address" placeholder="Enter your address">
-            </div>
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="form-label" for="latitude"><i class="fas fa-map-pin"></i> Latitude (optional)</label>
-                    <input type="number" step="any" class="form-control" id="latitude" name="latitude" placeholder="e.g., 28.6139">
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="longitude"><i class="fas fa-map-pin"></i> Longitude (optional)</label>
-                    <input type="number" step="any" class="form-control" id="longitude" name="longitude" placeholder="e.g., 77.2090">
-                </div>
-            </div>
-            <button type="button" class="btn btn-secondary" onclick="getLocation()" style="margin-bottom:1rem;">
-                <i class="fas fa-location-arrow"></i> Get My Location
-            </button>
             <div class="form-group">
                 <label class="form-label" for="password"><i class="fas fa-lock"></i> Password</label>
                 <input type="password" class="form-control" id="password" name="password" required>
@@ -87,22 +67,6 @@
             </div>
         </form>
     </div>
-
-    <script>
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    document.getElementById('latitude').value = position.coords.latitude.toFixed(6);
-                    document.getElementById('longitude').value = position.coords.longitude.toFixed(6);
-                    alert('Location captured! Please fill in your address.');
-                }, function(error) {
-                    alert('Unable to get location. Please enter manually.');
-                });
-            } else {
-                alert('Geolocation is not supported by your browser.');
-            }
-        }
-    </script>
 
     <footer>
         <div class="footer-content">
